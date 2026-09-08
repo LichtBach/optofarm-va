@@ -58,24 +58,29 @@ item with real latency upside, and it is a question for ElevenLabs.
 Net: a real but modest saving (~1,000 tokens, ~4% of per-turn input) against losing gate semantics
 and forking the tools. Not taken.
 
-## Open item: the compiled workflow is a separate committed artifact
+## Resolved: the runtime executes the procedures, not the stale workflow blob
 
-Committing procedure versions does **not** recompile the agent's `workflow` graph.
+Earlier this file recorded an open question: the agent config's `workflow` graph still held the old
+hang-up structure (8 `tool` nodes, 8 `end` nodes with `return_when_nested: false`) even after the
+procedure drafts were committed, and it was unclear which artifact the runtime actually ran.
 
-On this branch the procedure drafts were committed (`agents_update` commits pending procedure
-drafts — the new procedure versions share the commit timestamp of the prompt version), yet the
-agent config's `workflow` still holds the **old** graph: 8 `tool` nodes, 8 `end` nodes with
-`return_when_nested: false`, 8 `Failure` edges, and zero occurrences of `YOU MUST CALL`.
+Call `conv_5301m20adnk4et6rs9h64d4j58t0` settles it. Every node in its trace is an
+`override_agent` or `say` node from the **new** compiled procedures —
+`agtprc_7801..._4_if_1_override_agent`, `_4_if_2_override_agent`, `_4_if_4_override_agent`,
+`_4_if_6_override_agent`, `_4_if_12_say` — and no `_tool` or `_end` node appears anywhere. The old
+graph's `_4_if_7_tool` and `_4_if_9_end` were not traversed.
 
-`agents_compile_procedures` is preview-only — it returns the graph without writing it. Writing the
-compiled graph back would mean passing the whole ~128 KB blob through `agents_update`'s `body`
-escape hatch, which is not something to do by hand without byte-level verification.
+So the `workflow` field in the agent config is a stale cache, not the executed artifact.
+**The tool-failure hang-up fix is live on this branch.** No UI compile is needed for it to take
+effect. `n8n-evolvo-integration` still holds its fix as uncommitted procedure drafts, so it does
+still need a publish there.
 
-**Action required in the UI:** open the branch and run the procedures compile/publish, then make a
-test call. This applies to `n8n-evolvo-integration` too — its fix is in the same state.
-
-Which artifact the runtime actually executes (the committed `workflow`, or a fresh compile of the
-pinned procedure versions) could not be determined from the API alone. A test call settles it.
+One consequence worth knowing: the `evolvo_*` webhooks are invoked as **nested tools inside the
+node-transition call**, not as top-level tool calls. In that trace,
+`notify_condition_1_met` carried `{"nested_tools":{"evolvo_check_availability":{"location":"Postei"}}}`.
+This is the same mechanism the old `end_call` hang-up used. It also means tool-level settings
+(`pre_tool_speech`, `tool_call_sound`) may or may not apply to these invocations — a test call is
+the only way to confirm.
 
 ## Security note
 
