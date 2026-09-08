@@ -66,6 +66,52 @@ still be run manually.
 - Several assert on fixed 2026 dates (9 September, 9 December) whose availability
   drifts, so they rot over time.
 
+## The UI cannot write to Main at all
+
+Detaching the tests in the UI failed with `Failed to update agent`, and the deletion did
+not persist — re-reading Main afterwards still showed all 9 test ids attached. So the
+publish failure and the save failure are the same bug: **the UI's write to Main is
+rejected outright.**
+
+The server is not the problem. A minimal PATCH through the API succeeds:
+
+- `{"name": "Optofarm Agent - DEMO"}` → committed seq 18
+- `{"platform_settings": {"testing": {"attached_tests": []}}}` → committed seq 19
+
+The second one is the fix. It deep-merges: a field-by-field diff of `platform_settings`
+before and after shows **0 differences outside `.testing`** — guardrails, overrides,
+widget, privacy, auth and call limits all preserved — and the prompt, tool ids, workflow
+node count and RAG setting are byte-identical.
+
+## Why the UI's write is rejected and the API's is not
+
+The API PATCH sends only the field being changed. The UI sends back the whole config it
+loaded. Main's stored config contains fields the read model returns but the write model
+does not define:
+
+| Field | Present in read | In write schema |
+| --- | --- | --- |
+| `platform_settings.guardrails.synthetic_voice` | yes | no |
+| `platform_settings.privacy.user_memory` | yes | no |
+| `platform_settings.privacy.nested_history_redaction` | yes | no |
+| `platform_settings.queueing_config` | yes | no |
+| `platform_settings.safety` | yes | no |
+| `platform_settings.simulation_library` | yes | no |
+| `platform_settings.analysis_llm_billed` | yes | no |
+| `widget.language_presets.*.first_message_quick_replies_translation` | yes | no |
+| `testing.referenced_tests_ids` | yes | no |
+| `rag.optional_rag_enabled`, `rag.include_source_urls` | yes | no |
+
+Several nested schemas are declared `additionalProperties: false`, so an echoed-back
+extra is a hard validation failure rather than an ignored field. This is worth raising
+with ElevenLabs support with the agent id and a failing timestamp — it is their bug, not
+a fault in the merged config.
+
+## Workaround
+
+Change Main through the API with a minimal PATCH naming only the field you are changing,
+rather than through the UI editor, until the read/write schema mismatch is fixed.
+
 ## Note on a false lead
 
 The first suite run reported `Insufficient credits to run this simulation` on one test.

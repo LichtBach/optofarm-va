@@ -14,7 +14,7 @@ Source of truth for the ElevenLabs Conversational AI agent **Optofarm Agent - DE
 | `system-prompt-n8n-optimized.md` | Optimized system prompt on branch `n8n-evolvo-optimized` |
 | `prompt-optimization.md` | Where a turn's tokens go, what was cut, and what was deliberately not cut |
 | `call-latency-and-dead-air.md` | Measured dead air per call, why it happens, and the tool-call sound/speech fix |
-| `deployment-blocked-by-attached-tests.md` | Why publishing Main failed after the merge, and the fix |
+| `deployment-blocked-by-attached-tests.md` | Why publishing and saving Main fail after the merge, and the fix |
 
 Also attached to the agent, managed in the ElevenLabs UI:
 
