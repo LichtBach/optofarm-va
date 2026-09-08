@@ -10,6 +10,7 @@ Source of truth for the ElevenLabs Conversational AI agent **Optofarm Agent - DE
 | `system-prompt.md` | Agent system prompt |
 | `knowledge-base/kb_faq_operational_hu.md` | KB text doc `l7TG9P3XnTjgRThXelU5` |
 | `knowledge-base/kb_faq_operational_ro.md` | KB text doc `zynIEChUpgg4AaEbZInG` |
+| `procedure-tool-failure-hangup.md` | Why deterministic `tool_call` steps hang up the call, and the fix |
 
 Also attached to the agent, managed in the ElevenLabs UI:
 
