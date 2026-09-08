@@ -83,11 +83,29 @@ before and after shows **0 differences outside `.testing`** — guardrails, over
 widget, privacy, auth and call limits all preserved — and the prompt, tool ids, workflow
 node count and RAG setting are byte-identical.
 
-## Why the UI's write is rejected and the API's is not
+## Why the UI's write was rejected and the API's was not
 
-The API PATCH sends only the field being changed. The UI sends back the whole config it
-loaded. Main's stored config contains fields the read model returns but the write model
-does not define:
+Detaching the tests through the API fixed the UI: publishing then succeeded, with no new
+version written (the tip was already valid, so the UI reconciled against seq 19). So the
+attached tests were the trigger for both failures, not merely a coincident change.
+
+The best-fitting explanation is `platform_settings.testing.referenced_tests_ids`. The
+read API returns it; the write model (`AgentTestingSettings`) defines only
+`attached_tests` and does not accept it. The UI sends back the whole config it loaded,
+so it echoed a populated 9-element `referenced_tests_ids` into a schema that has no such
+field — and several nested schemas here are declared `additionalProperties: false`, so
+an unexpected key is a hard validation failure rather than an ignored one. With the
+tests detached the array serialises empty and the same payload passes. The API patches
+never carried the field at all, which is why they always worked.
+
+This is unconfirmed in the sense that the raw HTTP error was never visible — the UI only
+ever showed `Failed to update agent`. But it is the only account consistent with all
+four observations: UI save fails with tests attached, UI publish fails with tests
+attached, minimal API patches always succeed, and UI publish succeeds once the tests are
+detached.
+
+Other fields in Main's stored config are returned by the read API but absent from the
+write schema, and are candidates for the same class of failure in future:
 
 | Field | Present in read | In write schema |
 | --- | --- | --- |
@@ -99,18 +117,19 @@ does not define:
 | `platform_settings.simulation_library` | yes | no |
 | `platform_settings.analysis_llm_billed` | yes | no |
 | `widget.language_presets.*.first_message_quick_replies_translation` | yes | no |
-| `testing.referenced_tests_ids` | yes | no |
 | `rag.optional_rag_enabled`, `rag.include_source_urls` | yes | no |
 
-Several nested schemas are declared `additionalProperties: false`, so an echoed-back
-extra is a hard validation failure rather than an ignored field. This is worth raising
-with ElevenLabs support with the agent id and a failing timestamp — it is their bug, not
-a fault in the merged config.
+Worth raising with ElevenLabs support with the agent id and a failing timestamp — it is
+their read/write schema mismatch, not a fault in the merged config.
 
-## Workaround
+## Outcome
 
-Change Main through the API with a minimal PATCH naming only the field you are changing,
-rather than through the UI editor, until the read/write schema mismatch is fixed.
+Tests detached at seq 19 (`agtvrsn_1001m20g0mvaerfs0psmt3vg7fxh`). UI publish succeeds.
+Main is 100% live on the merged, optimized config.
+
+If a UI save fails this way again, detach or clear whatever list was most recently added
+before assuming the config is damaged, and fall back to a minimal API PATCH naming only
+the field being changed.
 
 ## Note on a false lead
 
