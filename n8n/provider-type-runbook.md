@@ -18,11 +18,16 @@ Three Code nodes change. Nothing else in the workflow is touched.
 | `CA Match OK?` is `Boolean($json._error) === true` → **out0 = CA Error Out**, out1 = continue | A new error just needs `_error: true` and it routes itself. No rewiring, no new nodes. |
 | `CA Webhook` uses `authentication: headerAuth` | The `X-Optofarm-Secret` is an n8n credential. Unrelated to this change. |
 
-### The one assumption you must check first
+### The naming convention — VERIFIED 2026-09-11
 
-The export contains **no provider names** — they come live from `get_info.php`, and `pinData` is empty.
-So the `Dr.` / `Optometrist` prefix convention is **unverified**. Step 1 exists to verify it.
-If the real names don't follow it, stop and adjust `providerKind()` before going further.
+The export contains no provider names (they come live from `get_info.php`, `pinData` is empty), so this
+was an assumption when the runbook was written. It has since been checked against the live instance:
+
+**16 calendars, 100% conforming — 12 `Dr. …`, 4 `Optometrist …`.** Includes the compound title
+`Dr. Prof. Szekely Attila  - Consiliere / Terapie psiho-ortoptica`. No bare names, no `Optom.`,
+no Hungarian titles. `providerKind()` needed no adjustment and was dry-run over all 16 real names.
+
+Step 1 is kept below because it must be re-run if the provider roster changes.
 
 ---
 
@@ -268,7 +273,7 @@ Run these against the webhook. Every one should pass before you consider this do
 | 1 | `{"location":"Doja"}` | Unchanged from today. Results include a new `provider_type` on each entry and on `earliest`. **Regression check — run this first.** |
 | 2 | `{"location":"Doja","provider_type":"optometrist"}` | Only `Optometrist …` names. `earliest.provider_type === "optometrist"`. `provider_type_filter: "optometrist"`. |
 | 3 | `{"location":"Doja","provider_type":"doctor"}` | Only `Dr. …` names. |
-| 4 | `{"location":"Reghin","provider_type":"optometrist"}` | Likely `no_provider_of_type` with `available_provider_types: ["doctor"]`. Confirms the new error routes through `CA Error Out`. |
+| 4 | `{"location":"Fortuna","provider_type":"optometrist"}` | `no_provider_of_type` with `available_provider_types: ["doctor"]`. Confirms the new error routes through `CA Error Out`. **Use Fortuna, not Reghin** — an earlier draft of this runbook wrongly predicted Reghin was doctor-only; it has two optometrists (Jeremias Zoltan, Dan Laura). Fortuna is the doctor-only branch. |
 | 5 | `{"doctor":"Baricz","provider_type":"optometrist"}` | **Baricz is still returned.** Named doctor beats the flag — proves the guard. |
 | 6 | `{"location":"Doja","provider_type":"DOCTOR "}` | Case/whitespace tolerated → treated as `doctor`. |
 | 7 | `{"location":"Doja","provider_type":"nonsense"}` | Falls back to unfiltered, exactly like test 1. Never an error. |
@@ -309,6 +314,14 @@ the tool description does, but the booking procedure doesn't route on visit type
 1–9 pass, that prompt-side routing is the next piece, and it's the part that actually changes
 what callers hear.
 
-Until then the tool description carries a safeguard: the agent must check that the slot it
-offers carries the `Dr.` / `Optometrist` prefix it asked for and refuse it otherwise — so a
+Until then the tool description carries a safeguard: when the filter actually ran, the agent must
+check the `provider_type` field of the slot it is about to offer and refuse a mismatch — so a
 half-finished backend surfaces as a refusal to offer, not as a doctor booked for a glasses fitting.
+
+**The safeguard is conditional, and that matters.** It applies only when `provider_type` was sent
+*without* a doctor name — mirroring the backend guard exactly. If the agent sends both, the named
+doctor comes back unfiltered and the agent must offer that slot normally. An earlier version of the
+safeguard was unconditional, which would have made the agent refuse the very doctor a caller asked
+for by name. Gating the `provider_type_filter` echo in `CA Format Slots` does not fix this on its
+own: the agent's check keys off what it *asked for*, not off the echo. Both halves are needed, and
+both are now in place.
