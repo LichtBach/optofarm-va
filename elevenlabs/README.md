@@ -15,6 +15,7 @@ Source of truth for the ElevenLabs Conversational AI agent **Optofarm Agent - DE
 | `prompt-optimization.md` | Where a turn's tokens go, what was cut, and what was deliberately not cut |
 | `call-latency-and-dead-air.md` | Measured dead air per call, why it happens, and the tool-call sound/speech fix |
 | `deployment-blocked-by-attached-tests.md` | Why publishing and saving Main fail after the merge, and the fix |
+| `qa-followups.md` | Client QA round of 11 Sep 2026: the five open items and what each one actually needs |
 
 Also attached to the agent, managed in the ElevenLabs UI:
 
