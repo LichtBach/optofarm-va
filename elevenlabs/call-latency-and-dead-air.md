@@ -51,19 +51,55 @@ All five `evolvo_*` tools now carry:
   (`elevator1`–`elevator4`) sound wrong on a direct clinic line.
 
 These tools are **workspace-level** and shared with `n8n-evolvo-integration`, so both n8n branches
-get the change. Main is unaffected — it uses a different tool set (`get_availability`,
-`book_appointment`, `manage_appointment`, `log_request`).
+get the change. *(Stale as of 11 Sep: Main was unaffected at the time because it used a different
+tool set. After the merge Main runs the five `evolvo_*` tools and does carry these settings.)*
+
+## Resolved 11 Sep: the holding line fires, and node transitions are what is left
+
+`pre_tool_speech: "force"` **does apply to nested tool invocations.** Open question 1 below is
+answered. In `conv_2401m27fwpb5fx9ahtgsfdcz8xpr` (live Main, `agtvrsn_7301m239c0jtfm5bnwrydrv11mff`,
+real inbound Twilio call), the line is spoken exactly once immediately before each webhook:
+
+```
+[10] agent t=28s   "Egy pillanat, kérem."
+[11] agent t=28s   -> evolvo_check_availability
+[31] agent t=120s  "Egy pillanat, kérem, lefoglalom az időpontot."
+[32] agent t=121s  -> evolvo_book_appointment
+```
+
+Two matches in the transcript, zero elsewhere. So **open question 2 is moot — do not add `tell`
+steps holding the line.** A `say` node on top of a working `force` would speak the line twice and
+produce exactly the repetition the client reported.
+
+What the fix bought, and what it did not:
+
+| | Pre-fix `conv_5301...` | Live Main `conv_2401...` |
+| --- | --- | --- |
+| Call length | 202 s | 150 s |
+| Silence > 2 s | 66.5 s (**33%**) | 53.6 s (**36%**) |
+| Worst single gap | **15.1 s** | **7.5 s** |
+
+The monster gaps are gone — worst halved — but the proportion of dead air did not improve. The
+profile changed shape: many 4–5 s gaps instead of a few very long ones. The largest remaining ones
+are the collection steps, which is open question 3 below:
+
+```
+t= 63s  4.9s  "Értem. Kérem, mondja meg a teljes nevét."          <- name step
+t=108s  4.9s  phone read-back
+t= 96s  4.7s  "kérem, diktálja be újra a telefonszámát"           <- phone re-ask
+t= 71s  3.9s  "Kérem, diktálja be a telefonszámát számjegyenként" <- phone step
+```
+
+Name + phone + read-back alone are 13.7 s. Merging those three `ask` steps into one leaves the
+~2.2 s per-turn floor but removes the transitions between them — roughly **6–7 s back**. That, plus
+dropping the redundant emergency `branch`, is now the whole remaining lever on this path.
 
 ## Still open
 
-1. **Do these settings apply to nested invocations?** The `evolvo_*` webhooks run as `nested_tools`
-   inside the node-transition call, not as top-level tool calls. Whether `pre_tool_speech` and
-   `tool_call_sound` fire there is not documented and could not be determined from the API. A test
-   call answers it.
-2. **If they do not fire**, the reliable fix is a `tell` step immediately before each tool-calling
-   step, holding only the holding line. `tell` compiles to a `say` node, which is deterministic and
-   is rendered in the caller's language — turn 15 of this call proves `say` nodes work. Cost: one
-   extra node per tool call, so slightly more total latency in exchange for filling the silence.
+
+1. ~~Do these settings apply to nested invocations?~~ **Answered 11 Sep: yes.** See above.
+2. ~~Add a `tell` step per tool call if they do not fire.~~ **Moot, and now harmful** — it would
+   double the holding line. See above.
 3. **Node traversal is the real latency driver**, not the webhooks. Fewer steps per procedure would
    cut more dead air than anything done to the tools. Worth weighing against the step granularity
    that the hang-up fix depends on.

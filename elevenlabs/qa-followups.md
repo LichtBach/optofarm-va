@@ -61,6 +61,45 @@ Work through these in order:
 Report before/after as `convai_ttf_audio_since_silence` per turn on a comparable test call, not as
 an impression.
 
+### Measured: what actually drives TTFB (11 Sep)
+
+Regression over all 24 LLM turns of `conv_5301m20adnk4et6rs9h64d4j58t0`, input tokens vs
+`convai_llm_service_ttfb`:
+
+```
+n=24   tokens 12,935-18,711 (mean 17,174)   TTFB 0.50-2.20 s (mean 1.15 s)
+correlation r = 0.072      r^2 = 0.005
+slope = 22 ms per 1,000 tokens
+```
+
+**Context length explains 0.5% of the variance in response time.** Cutting 1,000 tokens buys
+~22 ms per turn, ~0.5 s per call. Do not spend time shortening text to chase latency.
+
+Procedure text specifically: only the *active step's* instruction is injected, never the whole
+procedure. Two turns inside the same procedure, `_4_if_1` (ask name, ~600-char instruction) at
+17,854 tokens vs `_4_if_4` (book_appointment, ~3,000-char instruction) at 18,615 — a 761-token
+difference tracking those two steps' own text. And `procedure_hub` *after* the procedure exits
+(18,134) is as high as inside it, so the climb across the call is conversation history, not
+procedure text arriving. Consequences:
+
+| What | Effect on latency |
+| --- | --- |
+| Total procedure length | **Zero** — never loaded at once |
+| One step's instruction length | ~600 tokens ≈ **13 ms** |
+| Number of steps | **~2.1 s each** |
+
+Step *count* beats step *length* by roughly 160×. Fewer steps, not shorter steps.
+
+Node *type* matters more than token count. The two cheapest turns in the call were
+`_4_if_12_say` (14,228 tokens, **0.50 s**) and `_1_elif1_1`, a branch condition (12,935 tokens,
+**0.55 s**) — both under half the 1.15 s mean, far more than their lower token count predicts.
+`say` and condition nodes are cheap; `override_agent` nodes are expensive.
+
+Prompt caching is a minor item, not the headline. 23 of 24 turns had `input_cache_read: 0`; the one
+cache-hit turn ran 1.03 s against a 1.16 s mean for the misses. About 130 ms, on n=1 — consistent
+with the slope, since 17 k tokens only cost ~370 ms of prefill. Still worth a support ticket
+because 23/24 missing is anomalous, but do not sell it to the client as the fix.
+
 ## 2. Repetition
 
 Two shapes, per the client: the caller says something and the agent reads it straight back, and the
