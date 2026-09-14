@@ -63,8 +63,48 @@ which are still valid and hard-won — rather than as a set of working identifie
 unaffected: the webhooks, their URLs and their auth are unchanged, and the new agent talks to exactly
 the same five endpoints.
 
-> **If you are picking up the ElevenLabs half:** please record the new account, agent id, tool ids and
-> branch here, so the next person does not have to ask.
+### The ElevenLabs half, as of 2026-09-14
+
+Recorded per the request above. These are live and verified working today.
+
+| | |
+|---|---|
+| Account | `zoli@splitagency.eu` (creator/admin on the agent and all five tools) |
+| Agent | `agent_3101kyq03vpxfpb9vsskgfh2f0bd` — *Optofarm Agent - DEMO* |
+| Phone | `+40373800850`, bound to **Main** |
+| LLM | `gpt-5.6-luna`, `reasoning_effort: none`, `temperature: 0` |
+
+**Branches** — `Main` `agtbrch_6201kyq03wjnfct8p3w3bbt750vc` carries **100%** of traffic.
+`latency-step-merge` `agtbrch_9901m27xvmtze0ttfaa16t50kd7z` and `n8n-evolvo-integration`
+`agtbrch_2201m1y0ysy2fc9rmj3hc3mhszz7` are both at 0%.
+
+**Tools** are workspace-level, so editing one takes effect on every branch at once:
+
+| Tool | id |
+|---|---|
+| `evolvo_check_availability` | `tool_6001m237nj7ref3aajw2s6pzq4r3` |
+| `evolvo_book_appointment` | `tool_1901m237p5gsez290zmjdkt5sn0j` |
+| `evolvo_find_appointments` | `tool_7401m237pg7re6e8r9maz16v2db9` |
+| `evolvo_manage_appointment` | `tool_2301m237pzbyf3tbsn61mpgngmfr` |
+| `evolvo_log_request` | `tool_6801m237qjc1ecfaat76ebsxxkhs` |
+
+All five send `X-Optofarm-Secret` as a **workspace-secret reference**, `secret_id`
+`9OEoYk2IVSNikIlwRhqE` — not a literal. When the webhook secret is rotated, update that one
+workspace secret and every tool follows; the id itself is not a credential.
+
+**Procedures** (same ids on every branch): `booking` `agtprc_7801m0axd3y3ej590n280yw80rr0`,
+`cancel_or_reschedule` `agtprc_4901m0axdt4zev9tmgtcxy60x9da`, `escalate_to_human`
+`agtprc_4401m0axbt3rfcfvpj4grmp73wph`.
+
+**Publishing:** `agents_update_procedure_draft` only writes a *draft*. It does not reach live calls
+until a version is committed, and the safe way to commit one is a minimal patch — `name` set to its
+current value. Never send `conversation_config.agent.prompt.tools`: doing so once cleared
+`prompt.tool_ids` and deleted all five webhook tools.
+
+**Tests:** exactly one remains, `Optofarm: emergency 'substanță chimică în ochi'`
+(`test_2401m238bxv0f49tb5bmg1dtvaa5`). The 21-test suite the older documents describe did not
+survive the account move. Nothing currently mocks `book_appointment`. No tests are attached to Main
+— deliberately, since attached tests once blocked publishing entirely.
 
 ## Handover: what the n8n side needs from the ElevenLabs side
 
