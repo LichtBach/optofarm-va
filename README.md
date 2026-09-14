@@ -56,13 +56,21 @@ verified that cancelling an appointment releases its slot in about 8 seconds, an
 it uncovered — a reschedule that leaked a slot on every use, and an untranslated Romanian state
 reaching the agent. See [`n8n/slot-release-and-reschedule.md`](n8n/slot-release-and-reschedule.md).
 
-**ElevenLabs — moved to a new account.** The agent has been rebuilt on a **different ElevenLabs
-account** from the one the older documents describe. Everything in this repository that names an
-ElevenLabs `agent_…`, `tool_…`, `test_…`, `agtbrch_…` or `agtprc_…` id predates that move and those
-ids are **dead**. Treat the ElevenLabs documents here as a record of *decisions and reasoning* —
-which are still valid and hard-won — rather than as a set of working identifiers. The n8n side is
-unaffected: the webhooks, their URLs and their auth are unchanged, and the new agent talks to exactly
-the same five endpoints.
+**ElevenLabs — an account move was reported, but the live evidence does not show one.** This was
+recorded here on 2026-09-14 as "the agent has been rebuilt on a different account, every id in this
+repo is dead". Two independent live reads on the same day contradict that: the ids in the table
+below were read from the live API by the ElevenLabs side, and the n8n side separately queried the
+API and saw the *same* account and the *same* agent, actively taking calls. **Treat the table below
+as the truth and this paragraph as an open question** — if a second workspace does exist, whoever
+knows should record it here, because right now nothing points to one.
+
+What is certainly true is that **ids in the older documents are unreliable** — the tool ids were all
+rotated on 2026-09-09 (see `ELEVENLABS_AGENT_STATUS.md` round 8b) and most tests were recreated after
+that, which changes every test id. Read the older ElevenLabs documents for their *decisions and
+reasoning*, which are still valid and hard-won, and take identifiers only from the table below.
+
+Either way the n8n side is unaffected: the webhooks, their URLs and their auth are unchanged, and the
+agent talks to exactly the same five endpoints.
 
 ### The ElevenLabs half, as of 2026-09-14
 
