@@ -92,6 +92,29 @@ export OPTOFARM_WEBHOOK_SECRET=...   # from the n8n credential
 ./n8n/smoke-test.sh
 ```
 
+## Reading what evolvo actually returned, without touching anything
+
+The highest-value debugging trick here, and the one that is easy to miss. Past executions keep every
+node's real input and output, so you can read raw evolvo responses without adding a probe node,
+running a test booking, or changing the live workflow at all:
+
+```bash
+curl -s -H "X-N8N-API-KEY: $N8N_API_KEY" \
+  "https://n8n.splitagency.biz.id/api/v1/executions?workflowId=jLUnlrt9zM8VWZvp&limit=20"
+curl -s -H "X-N8N-API-KEY: $N8N_API_KEY" \
+  "https://n8n.splitagency.biz.id/api/v1/executions/<id>?includeData=true"
+```
+
+`data.resultData.runData["<node name>"][0].data.main[0][0].json` is that node's first output item.
+
+This is how the 2026-09-14 findings were established — that `get_work_days.php` carries no working
+hours, that `get_info.php` returns 30 calendars with eight empty `ai_*` fields, and how the scan
+cache was verified to be skipping the evolvo calls it claims to skip (count the `.php` nodes in
+`runData`). Always prefer this over adding a diagnostic node or writing a test record.
+
+**Check the schema docs against it before trusting them.** `api-docs/*.json` is accurate but dated;
+evolvo has added fields since. The execution data is the live truth.
+
 ## Editing the workflow
 
 Via the n8n REST API (`X-N8N-API-KEY` header):

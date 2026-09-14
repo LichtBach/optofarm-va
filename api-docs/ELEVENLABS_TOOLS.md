@@ -27,12 +27,17 @@ Ask the caller for city / preferred location / preferred doctor / date **before*
 | `city` | string, optional | e.g. "Targu Mures", "Reghin", "Sovata" |
 | `location` | string, optional | e.g. "Fortuna", "Postei" |
 | `date_from` | string, optional | YYYY-MM-DD, must be future; defaults to tomorrow. For "in 2 months" requests pass that future date — the API then scans the next ~15 working days of the doctor's schedule from there |
+| `provider_type` | string, optional | `doctor` or `optometrist` — **added 2026-09-11, not previously documented here.** Filters the calendars searched. Anything other than those two values is ignored (treated as unfiltered) rather than rejected. **Ignored entirely when `doctor` is given**, since naming a provider is more specific than naming a kind |
 
 Success: `results[]` per matching calendar (max 4) with `available_days[]` (`date`, `free_times[]` 24h, `total_free_slots`) and `slot_duration_minutes`; days with no free slot are dropped. Plus (added 2026-09-07):
 - `earliest` — `{date, time, doctor, location}`: the single earliest free slot across all matched calendars (the agent offers exactly this to urgent / "as soon as possible" / no-preference callers).
 - when `date_from` was sent: `requested_date`, `requested_date_status` (`available` | `not_available`) and, if available, `requested_date_slots` (`{date, time, doctor, location, free_times[]}` for that exact day).
 
-Errors: `no_match` (includes `available_doctors`/`available_locations` to offer — the agent offers at most three), `too_many_matches` (ask caller to narrow down), and `doctor_not_at_location` (the doctor exists but not at the requested branch; carries `doctor_locations[]` and `doctors_at_requested_location[]`).
+Every result, plus `earliest` and `requested_date_slots`, also carries `provider_type` (`doctor` | `optometrist`). A top-level `provider_type_filter` echoes the filter **only when it actually ran** — naming a `doctor` bypasses the filter, so a missing echo is normal and must not be read as the filter having failed.
+
+Errors: `no_match` (includes `available_doctors`/`available_locations` to offer — the agent offers at most three), `too_many_matches` (ask caller to narrow down), `doctor_not_at_location` (the doctor exists but not at the requested branch; carries `doctor_locations[]` and `doctors_at_requested_location[]`), and `no_provider_of_type` (the branch has no provider of the requested kind — e.g. Fortuna has no optometrist).
+
+**How provider type is decided:** off the calendar-name prefix. Verified live on 2026-09-14 across all 30 calendars — 21 `Dr. …`, 9 `Optometrist …`, none unmatched. Every non-doctor is *explicitly* prefixed `Optometrist`; nothing is identified by the absence of "Dr.". The list is not static (it was 16 calendars on 2026-09-11), so re-verify after clinic changes. The mapping from *reason for the visit* to provider type is a prompt-side decision and is not made here — n8n only filters on what it is asked for.
 
 ## 2. book_appointment
 `POST https://n8n.splitagency.biz.id/webhook/optofarm-book-appointment`
