@@ -4,6 +4,55 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-15 (late night, 3) — `pre_tool_speech: auto` on the two tools the caller actually waits on
+
+Client request: put `pre_tool_speech` back to **`auto`** on `evolvo_check_availability` and
+`evolvo_manage_appointment`, so the agent decides from recent execution times whether to speak before
+the call. Done — those are the right two: they are the slowest and the most variable (availability
+has been measured anywhere from 0.9 s to 5.1 s depending on search width). The other three stay
+`off`.
+
+| tool | pre_tool_speech |
+|---|---|
+| `evolvo_check_availability` | **auto** |
+| `evolvo_manage_appointment` | **auto** |
+| `evolvo_book_appointment` | off |
+| `evolvo_find_appointments` | off |
+| `evolvo_log_request` | off |
+
+### The setting alone would have done nothing
+
+The prompt said *"NEVER say a holding line, a filler, or an acknowledgement… not before a lookup, not
+before a question, not before anything."* That is a flat ban, so `auto` would have asked the agent to
+speak and the prompt would have told it not to — a direct contradiction, resolving either to silence
+(the setting wasted) or to a banned phrase.
+
+So the ban was narrowed rather than lifted. What changed:
+
+- **Acknowledgements stay banned outright** — no *"Bine"*, *"Rendben"*, *"Perfect"*, *"Înțeleg"*,
+  *"Desigur"*. This was the *"shouldn't approve the user"* half of the complaint and none of it is
+  about latency.
+- **Holding lines stay banned in front of a plain question, a known fact, or anything the agent is
+  not actually waiting on** — which is what produced *"Verific acum."* before a simple question.
+- **One exception, deliberately narrow:** before a lookup that will take a moment, and **only when
+  the system itself prompts speech first**, one short phrase of a few words. That clause is what
+  `auto` triggers, so nothing else in the call gains permission.
+- **The anti-repetition rule is kept and strengthened inside the exception**: it *must* differ from
+  every holding phrase already used in the call, and *"silence is always better than repeating
+  yourself."*
+
+The distinction that matters: the agent may now speak **when it is genuinely waiting**, and only
+then. Every previous complaint was about it speaking when it was **not** waiting — before questions,
+before facts it already had, and with the same words every time.
+
+### Worth watching
+
+`auto` judges from *recent* latency, so early in a call it has little to go on and may speak before a
+fast lookup. If a phrase reappears before turns that are obviously quick, the honest options are
+`off` on `check_availability` again, or accepting it as the price of covering the slow tail. Nothing
+else changed: `speculative_turn` still false, soft timeout still -1, and the no-callback-on-success
+rule from the previous entry verified still in place.
+
 ## 2026-09-15 (late night, 2) — a successful booking no longer promises a callback
 
 Client correction: **nobody rings a caller back after a booking succeeds.** The only thing they
