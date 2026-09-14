@@ -99,3 +99,23 @@ Tested through our n8n workflow (IP 72.62.44.134): `get_schedule.php` with `sche
 Test records left in the system (both cancelled via API, state **Anulat**): TEST TEST N8N / 0770000000 / Dr. Baricz Anna, Gheorghe Doja / 2026-09-09 10:00 (agenda), and Paciens Teszt / 123123123 / same doctor+location / 2026-09-09 10:20 (appointment). Paciens Teszt's own 2026-09-10 09:05 appointment was not touched.
 
 8. **Can a cancelled record be set back to Programat?** `update_schedule.php` with `state=0` returns `{"Result":"ERROR","errorcode":3,"message":"unknown status"}`; only 1/2/3 are accepted. During our tests the voice agent cancelled Paciens Teszt's 2026-09-10 09:05 appointment by mistake and we could not undo it — could you (or the clinic) restore it, and is there an API way to undo a cancellation? Related: the cancelled record still blocks the slot, and slots are on the calendar's 20-minute grid, so 09:05 cannot be re-booked through `post_schedule.php` either.
+
+9. **Can an appointment be hard-deleted through the API, not just set to `Anulat`?**
+Optofarm has told us deletion is now possible "through the current API". We can find no trace of it:
+your v4 Postman collection still documents `update_schedule.php` as `scheduleid` + `state` + `obs`
+(unchanged from v3, while `get_schedule`, `get_schedule_patient` and `post_schedule` all gained new
+fields in v4), and question 8 above establishes that only states 1/2/3 are accepted — `state=0`
+returns `errorcode 3, unknown status`.
+
+So, concretely:
+- Is there a delete — a `state` value beyond 1/2/3, an extra parameter on `update_schedule.php`, or a
+  separate endpoint? If so: exact URL/parameter, success response, error response.
+- What happens on a second delete of the same `scheduleid`, and on deleting a record already `Anulat`?
+- Is it recoverable in the admin panel afterwards, or gone for good?
+- **Does a delete free the slot immediately?** This is the one that matters most to us — see
+  question 5. If `Anulat` leaves the slot blocked for ~50 minutes but a delete frees it at once,
+  that alone would change how we handle a caller who cancels and wants to rebook the same time.
+
+If what was meant is simply that **staff** can delete a record in the evolvo admin panel, please say
+so plainly — that is what we have been asking for under "manual cleanup" all along, and it would mean
+there is nothing for us to build.
