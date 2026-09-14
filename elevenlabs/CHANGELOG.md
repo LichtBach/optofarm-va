@@ -4,6 +4,86 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-15 (late night) — `conv_5301m2ggh93feecvv9cahfg7pymv`: a regression I caused, plus a turn-taking fault
+
+This call ran on `agtvrsn_7901m2gfstdefjx9v816mvp2eyfr`, which **did** have every fix: the
+holding-line ban in the prompt, `soft_timeout -1`, `pre_tool_speech: off` on all five tools, the
+schema enums. Verified by reading that exact version back. So none of the three faults below is a
+stale-version artifact.
+
+| Time | What happened |
+|---|---|
+| 47 s | Agent asks *"La ce punct de lucru doriți programarea?"* — **and `notify_condition_1_met` fires in the same second**, advancing the procedure past the ask |
+| 49 s | *"Un moment, vă rog."* |
+| 55 s | Caller: *"Am— alo?"* — twelve seconds of dead air |
+| 61 s | `check_availability` called with **`location: "Postei"`** — the caller never said Poștei |
+| 65 s | The offer is emitted **twice, byte-identical, concatenated with no space**: *"…Vă convine?Am marți…"* |
+
+### 1. The invented branch is mine, and it is the serious one
+
+An hour earlier I added `required_constraints.any_of` requiring one of `location`/`doctor`/`city`,
+to stop the model calling the tool with no target. **It did stop that — by making the model fabricate
+a target instead.** Needing to call and having no branch, it satisfied the schema with `Postei`.
+
+That is strictly worse than what it replaced. A `missing_target` error costs two seconds and tells
+the agent to go and ask. A fabricated branch sends a real person to the wrong shop, and **the caller
+has no way to detect it** — the agent sounds exactly as confident either way. I traded a safe error
+for a silent wrong answer.
+
+**Reverted.** `required_constraints` is gone; `missing_target` is the designed and safe outcome, and
+the tool description now says so at length, including *"Guessing a branch the caller never said is
+the worst mistake available here… An error costs two seconds; a wrong branch costs them a wasted
+journey."* The `location` description says to leave it out when the caller has not named one, and
+explicitly not to carry over a branch merely mentioned while listing locations — which is where
+`Postei` most likely came from, since the agent had just recited the locations at 21 s.
+
+**The enums stay.** `city: ["Reghin","Sovata"]` and the eight-branch `location` enum constrain
+*values*, and cannot induce invention the way a required-field constraint does. That distinction is
+the lesson: a schema constraint that narrows a value is safe; one that forces a field to be present
+pushes the model to make something up.
+
+### 2. The duplicated utterance is a turn-taking fault, not a prompt problem
+
+No prompt can produce a byte-identical repeat concatenated without a space. That is one turn
+generated twice. The likely mechanism: **`speculative_turn: true`** — the agent speculatively
+generates before the turn resolves, the caller spoke *into the silence* at 55 s while a tool call was
+in flight, and both generations reached TTS.
+
+**`speculative_turn` is now `false`.** Stated as the leading hypothesis, not a proven cause — it is
+the only setting that can produce two generations of one turn, but the duplication happens inside
+ElevenLabs' orchestration and cannot be confirmed from here. If it recurs with speculation off, the
+next suspect is the interaction between `retranscribe_on_turn_timeout` and a caller speaking during a
+tool call, and it becomes a question for ElevenLabs support.
+
+Also set `interruption_mode: allow` on `check_availability` (was `disable_during_tool`). That mode
+existed to stop callers cutting across the agent mid-lookup — but with `pre_tool_speech: off` the
+agent is now **silent** during a lookup, so there is nothing to interrupt, and all the setting did
+was discard the caller's *"alo?"* instead of letting it land.
+
+### 3. "Un moment, vă rog." survived an explicit ban
+
+The prompt names that exact phrase and forbids it. Every configured source is off. So this is the
+model disregarding a direct instruction — the same class of failure as the three tool calls earlier
+tonight, and more evidence for the README's design note.
+
+There is nothing further to tighten in wording; it is already explicit and named. What is worth
+noting is *where* it appeared: covering a **twelve-second stall** after the procedure advanced past
+its own question. The filler was a symptom of the stall, not the disease. If the stall goes away, the
+filler has nothing to cover.
+
+### 4. The stall and the skipped ask are the root cause
+
+`notify_condition_1_met` fired in the **same second** as the question was asked, so the procedure
+moved into the availability step before the caller could answer. The agent then sat for twelve
+seconds, filled the silence, invented a branch and called the tool. Everything else in this call
+follows from that.
+
+This is the ask-step skipping the README documents at roughly one run in three, and it is now the
+highest-value thing left. It cannot be fixed with more prompt text — that has been tried tonight and
+failed twice. The durable fix is the n8n guard already requested: reject a lookup that carries
+neither `doctor` nor `provider_type`, and now also one whose `location` the transcript never
+contained, so a fabricated branch is refused server-side rather than trusted.
+
 ## 2026-09-15 (late) — holding lines banned outright; what the calendar screenshot actually shows
 
 ### The prompt still *permitted* the phrases
