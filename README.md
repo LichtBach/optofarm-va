@@ -135,8 +135,11 @@ appointment). See [`n8n/CHANGELOG.md`](n8n/CHANGELOG.md) and
    landmarks) were ported onto Main on 2026-09-15 and re-merged with the fixes made that day. The
    branch's own copies are now the stale ones: its prompt still scripts `Un moment, vă rog.`
    Re-branch from Main if a branch is needed again.
-3. **Zsófi's visit-reason → provider-type list** is the only thing still blocking QA item 4. The n8n
-   plumbing is finished and waiting (see below).
+3. ~~**Zsófi's visit-reason → provider-type list**~~ — **received and wired in 2026-09-15.** Her rule
+   confirmed the mapping already written on `evolvo_check_availability`; the actual gap was that the
+   booking procedure never *sent* `provider_type`, so every lookup ran unfiltered. It does now.
+   A branch with no optometrist is re-searched at branches that have one rather than falling back to
+   a local doctor. Unverified in a live call.
 4. **The ordering leak is fixed in wording but unproven in a call.** The ported `booking` procedure
    turns "never check availability before the purpose is known" from a rule into a stop condition.
    Watch it on the next smoke test rather than assuming it holds.

@@ -4,6 +4,71 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-15 (later still) — Zsófi's visit-reason rule wired in; `provider_type` was never actually sent
+
+Zsófi's answer arrived:
+
+> *"Valahogy úgy kellene, hogy ha sima szemüvegfelírás, szemüvegcsere, dioptriaellenőrzés — akkor
+> mindenképp optometrista legyen. Ha szembetegség, OCT, szemnyomásmérés, szűrővizsgálat, vagy egyebet
+> mond a páciens, akkor mehet az orvoshoz."*
+
+### The mapping was already right — the wiring was not
+
+`evolvo_check_availability`'s `provider_type` parameter already described almost exactly this rule
+(*"optometrist for a plain glasses prescription, a change of glasses, or a dioptre check; doctor for
+an eye disease, an OCT scan, eye pressure measurement, a screening, anything urgent, and anything you
+are not sure about"*). Zsófi's list **confirms** it rather than changing it — including her default,
+*"vagy egyebet mond a páciens → orvos"*, which matches "anything you are not sure about → doctor".
+
+**The real defect was that nothing ever sent the parameter.** The booking procedure's availability
+step listed `doctor`, `location`, `city` and `date_from` and stopped there. `provider_type` was
+documented on the tool, implemented in n8n since 2026-09-11, verified across 30 calendars — and never
+populated by the agent. Every lookup has been running unfiltered. That is why this looked "blocked on
+Zsófi" when the ElevenLabs half was also incomplete.
+
+Fixed: the availability step now sends `provider_type`, derived from the answer to intake question
+(2), with `doctor` stated as the safe default and the instruction to **leave it out entirely when the
+caller named a person** (a named doctor always wins — refusing the person a caller asked for is worse
+than offering the wrong kind).
+
+### Two judgement calls that Zsófi's text does not settle
+
+- **A bare "un control" / "kontroll".** Her list has `dioptriaellenőrzés` (optometrist) and
+  `szűrővizsgálat` (doctor), and a caller saying only "a check-up" could mean either. Resolved toward
+  her own default: a bare check-up is medical, so `doctor`. It is `optometrist` only when the caller
+  ties it to glasses or dioptres (*control de dioptrii*, *dioptriaellenőrzés*). Intake question (2)
+  says so explicitly and is told **not** to ask a follow-up about it — one question per turn matters
+  more than the marginal accuracy.
+- **A branch with no optometrist.** Not every branch has one — Fortuna is doctor-only. Falling back
+  to a doctor there would quietly defeat the point of the rule, which is to keep doctor capacity for
+  medical work. Decided (with the client) to honour *"mindenképp"* literally: on
+  `no_provider_of_type` the agent says that branch has no optometrist, then **calls again with the
+  same `provider_type` and no `location`** so the search reaches the branches that do have one, and
+  offers the earliest optometrist slot naming its branch. It never volunteers the local doctor. The
+  one escape hatch is caller-initiated: if they say themselves that they cannot travel, the agent may
+  look again at their branch unfiltered.
+
+`no_provider_of_type` carries no alternative-branch list, which is why the re-search drops `location`
+rather than reading a field.
+
+### Changed
+
+- **`evolvo_check_availability`** — `provider_type` description gains the "control" disambiguation
+  and an explicit "send it on every lookup where the reason is known and no person was named". The
+  tool description's `no_provider_of_type` clause changes from *"offer what the result says IS
+  available there"* to the re-search above. `location` notes that it must be dropped on that
+  re-search.
+- **`booking` procedure** (`agtprcv_4801m2gardc4e3wb0kk5atpvqb9f`) — the availability step sends
+  `provider_type`; intake question (2) says what the answer decides; the negotiation rule now counts
+  a changed `provider_type` as a distinct lookup.
+
+### Worth revisiting
+
+The classification still rests on the calendar-name prefix, and evolvo's `ai_doctor_title` field
+would make it data instead (question 11 for Imreh). `ai_description` could hold this visit-reason
+mapping as clinic-maintained data rather than prompt text — which would mean Zsófi edits it herself
+instead of it being frozen here.
+
 ## 2026-09-15 (later) — booking optimisation ported onto Main, and cancel stops guessing
 
 Two things landed together, because the first depends on prompt sections the second brought with it.
