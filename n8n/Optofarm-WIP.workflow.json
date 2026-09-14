@@ -1273,7 +1273,7 @@
   },
   {
    "parameters": {
-    "jsCode": "const b = ($input.first().json.body) || {};\nconst str = x => (typeof x === 'string' ? x.trim() : '');\nconst missing = [];\nconst phone = str(b.phone).replace(/[\\s\\-\\.]/g, ''); if (!phone) missing.push('phone');\nif (missing.length) {\n  return [{ json: { _error: true, success: false, error: 'missing_fields', missing,\n    hint: 'The lookup needs only the phone number the appointment was made with, dictated digit by digit. The name is NOT needed and must not be asked for.' } }];\n}\n// 2026-09-09: identification is PHONE ONLY. full_name is still accepted (older callers/tests send it)\n// but it no longer filters anything - spoken names come through the phone too mangled to match\n// (a caller said \"Csergo Zsofia\", ASR produced \"Cerches Zofia\"). Instead we return every appointment\n// on this phone WITH the patient name recorded in evolvo, and the agent reads one back for an\n// explicit yes before anything is changed (see MAN's appointment_confirmed gate).\nconst full_name = str(b.full_name);\n\n// ---- phone read-back gate (server-side) ----\n// The agent must read the number back digit by digit and get the caller's yes before this call.\n// It reports that with phone_confirmed=true. A call without it is refused with a read-back instruction;\n// a call that flips the flag less than 5 s after the refusal is refused again (no real read-back could fit).\n{\n  const sd = $getWorkflowStaticData('global'); sd.phoneGate = sd.phoneGate || {};\n  const now = Date.now();\n  for (const k of Object.keys(sd.phoneGate)) if (now - sd.phoneGate[k] > 2 * 3600 * 1000) delete sd.phoneGate[k];\n  const conv = str(b.conversation_id || b.idempotency_key) || 'anon';\n  const gateKey = conv + '|' + phone;\n  const confirmed = b.phone_confirmed === true || String(b.phone_confirmed).toLowerCase() === 'true';\n  const firstRefusal = sd.phoneGate[gateKey];\n  if (!confirmed || (firstRefusal && now - firstRefusal < 5000)) {\n    if (!firstRefusal) sd.phoneGate[gateKey] = now;\n    const d = phone.split('');\n    const groups = [];\n    for (let i = 0; i < d.length; i += 3) groups.push(d.slice(i, i + 3).join(', '));\n    return [{ json: { _error: true, success: false, error: 'confirm_phone_first', phone,\n      read_back: groups.join(' — '),\n      message: 'Nothing was done yet. First read this phone number back to the caller digit by digit, ask whether it is correct, and END your turn. Only after the caller answers yes, call this tool again with exactly the same details and phone_confirmed set to true. If the caller corrects the number, call again with the corrected number and phone_confirmed true after they confirm it.' } }];\n  }\n}\n// ---- remember the confirmed number for this call ----\n// Once a caller has dictated a number and confirmed the read-back, no later step in the same call\n// should make them dictate it again. The number is kept against the conversation id so log_request\n// can recover it server-side instead of relying on the agent to remember not to ask.\n{\n  const sd = $getWorkflowStaticData('global'); sd.confirmedPhone = sd.confirmedPhone || {};\n  const now = Date.now();\n  for (const k of Object.keys(sd.confirmedPhone)) if (now - sd.confirmedPhone[k].ts > 6 * 3600 * 1000) delete sd.confirmedPhone[k];\n  const conv = str(b.conversation_id || b.idempotency_key);\n  if (conv) sd.confirmedPhone[conv] = { phone, ts: now };\n}\nreturn [{ json: { full_name, phone } }];\n"
+    "jsCode": "const b = ($input.first().json.body) || {};\nconst str = x => (typeof x === 'string' ? x.trim() : '');\nconst missing = [];\nconst phone = str(b.phone).replace(/[\\s\\-\\.]/g, ''); if (!phone) missing.push('phone');\nif (missing.length) {\n  return [{ json: { _error: true, success: false, error: 'missing_fields', missing,\n    hint: 'The lookup needs only the phone number the appointment was made with, dictated digit by digit. The name is NOT needed and must not be asked for.' } }];\n}\n// 2026-09-09: identification is PHONE ONLY. full_name is still accepted (older callers/tests send it)\n// but it no longer filters anything - spoken names come through the phone too mangled to match\n// (a caller said \"Csergo Zsofia\", ASR produced \"Cerches Zofia\"). Instead we return every appointment\n// on this phone WITH the patient name recorded in evolvo, and the agent reads one back for an\n// explicit yes before anything is changed (see MAN's appointment_confirmed gate).\nconst full_name = str(b.full_name);\n\n// ---- phone read-back gate (server-side) ----\n// The agent must read the number back digit by digit and get the caller's yes before this call.\n// It reports that with phone_confirmed=true. A call without it is refused with a read-back instruction;\n// a call that flips the flag less than 5 s after the refusal is refused again (no real read-back could fit).\n{\n  const sd = $getWorkflowStaticData('global'); sd.phoneGate = sd.phoneGate || {};\n  const now = Date.now();\n  for (const k of Object.keys(sd.phoneGate)) if (now - sd.phoneGate[k] > 2 * 3600 * 1000) delete sd.phoneGate[k];\n  const conv = str(b.conversation_id || b.idempotency_key) || 'anon';\n  const gateKey = conv + '|' + phone;\n  const confirmed = b.phone_confirmed === true || String(b.phone_confirmed).toLowerCase() === 'true';\n  const firstRefusal = sd.phoneGate[gateKey];\n  if (!confirmed || (firstRefusal && now - firstRefusal < 5000)) {\n    if (!firstRefusal) sd.phoneGate[gateKey] = now;\n    const d = phone.split('');\n    const groups = [];\n    for (let i = 0; i < d.length; i += 3) groups.push(d.slice(i, i + 3).join(', '));\n    return [{ json: { _error: true, success: false, error: 'confirm_phone_first', phone,\n      read_back: groups.join(' — '),\n      message: 'Nothing was done yet. First read this phone number back to the caller digit by digit, ask whether it is correct, and END your turn. Only after the caller answers yes, call this tool again with exactly the same details and phone_confirmed set to true. If the caller corrects the number, call again with the corrected number and phone_confirmed true after they confirm it.' } }];\n  }\n}\n// ---- remember the confirmed number for this call ----\n// Once a caller has dictated a number and confirmed the read-back, no later step in the same call\n// should make them dictate it again. The number is kept against the conversation id so log_request\n// can recover it server-side instead of relying on the agent to remember not to ask.\n{\n  const sd = $getWorkflowStaticData('global'); sd.confirmedPhone = sd.confirmedPhone || {};\n  const now = Date.now();\n  for (const k of Object.keys(sd.confirmedPhone)) if (now - sd.confirmedPhone[k].ts > 6 * 3600 * 1000) delete sd.confirmedPhone[k];\n  const conv = str(b.conversation_id || b.idempotency_key);\n  if (conv) sd.confirmedPhone[conv] = { phone, ts: now };\n}\nreturn [{ json: { full_name, phone,\n  conversation_id: str(b.conversation_id || b.idempotency_key) || 'anon' } }];\n"
    },
    "id": "find-validate-input",
    "name": "FIND Validate Input",
@@ -1471,7 +1471,7 @@
   },
   {
    "parameters": {
-    "jsCode": "// Merge get_schedule_patient.php (patient-linked appointments) with a get_schedule.php scan\n// (catches Agenda/lead records, which get_schedule_patient.php does not return by phone - verified 2026-09-07).\n// 2026-09-09: matching is BY PHONE ONLY - the caller's spoken name is no longer used to filter,\n// because ASR mangles names badly. Every appointment on the phone is returned with the patient\n// name evolvo has on the record, and the agent must get an explicit yes on ONE of them.\nconst norm = s => (s || '').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');\nconst digits = p => { let d = (p || '').toString().replace(/\\D/g, ''); if (d.startsWith('0040')) d = d.slice(4); else if (d.startsWith('40') && d.length > 10) d = d.slice(2); return d.replace(/^0+/, ''); };\nconst samePhone = (a, b) => { const x = digits(a), y = digits(b); return x && y && (x === y || x.endsWith(y) || y.endsWith(x)); };\nconst nameOf = rec => rec.pacient || rec.patient || rec.name || '';\nconst STATE = { 'programat': 'scheduled', 'confirmat': 'confirmed', 'anulat': 'cancelled', 'incheiat': 'completed', 'nu s-a prezentat': 'no_show', 'trebuie reprogramat': 'needs_reschedule', 'reprogramat': 'rescheduled' };\nconst stateOf = rec => STATE[norm(rec.state)] || rec.state || null;\nconst isCancelled = rec => stateOf(rec) === 'cancelled';\n// Short, stable handle for one record: derived from the scheduleid, so it survives between the\n// find call and the manage call and does not depend on list order (an index would shift if a\n// record appeared or disappeared in between - and that would cancel the wrong appointment).\nconst hashRef = key => { let h = 5381; for (let i = 0; i < key.length; i++) h = ((h * 33) ^ key.charCodeAt(i)) >>> 0; return h.toString(36).toUpperCase().slice(-4).padStart(4, '0'); };\nfunction collect(q, patientResp, scanResps) {\n  let recs = [];\n  const pb = patientResp && patientResp.body;\n  if (patientResp && patientResp.statusCode === 200 && pb && pb.Result !== 'NOTFOUND') {\n    recs = recs.concat(Array.isArray(pb) ? pb : (pb.Records || pb.records || []));\n  }\n  let scanErrors = 0;\n  for (const r of scanResps) {\n    if (r.statusCode === 200 && Array.isArray(r.body)) recs = recs.concat(r.body.filter(x => samePhone(x.phone, q.phone)));\n    else scanErrors++;\n  }\n  const seen = new Set();\n  recs = recs.filter(x => { const k = x.scheduleid || (x.date + '|' + x.medic); if (seen.has(k)) return false; seen.add(k); return true; });\n  recs = recs.filter(r => !isCancelled(r));\n  recs.sort((a, b) => (a.date || '').localeCompare(b.date || ''));\n  const usedRefs = new Set();\n  for (const r of recs) {\n    let ref = hashRef(r.scheduleid || ((r.date || '') + '|' + (r.medic || '')));\n    let n = 1; while (usedRefs.has(ref)) ref = ref.slice(0, 3) + (n++).toString(36).toUpperCase();\n    usedRefs.add(ref); r._ref = ref;\n  }\n  return { recs, scanErrors };\n}\nconst publicView = rec => ({\n  ref: rec._ref,\n  person: nameOf(rec),\n  date: (rec.date || '').slice(0, 10),\n  time: (rec.date || '').slice(11, 16),\n  doctor: rec.medic || rec.doctor,\n  location: rec.workstation,\n  type: rec.type || null,\n  state: stateOf(rec),\n  kind: rec.form === 'Agenda' ? 'request_pending_staff_confirmation' : 'appointment',\n  manageable: Boolean(rec.scheduleid)\n});\n\nconst q = $('FIND Validate Input').first().json;\nif (q._error) return [{ json: q }];\nconst pr = $('FIND get_schedule_patient.php').first().json;\nconst scans = $('FIND get_schedule.php').all().map(i => i.json);\nif (pr.statusCode !== 200 && scans.every(r => r.statusCode !== 200)) {\n  return [{ json: { success: false, error: 'evolvo_api_error', step: 'find', status: pr.statusCode } }];\n}\nconst { recs, scanErrors } = collect(q, pr, scans);\nif (!recs.length) {\n  return [{ json: { success: true, found: false, count: 0,\n    message: 'No appointments found for this phone number in the next 31 days.',\n    hint: 'Ask whether the appointment might have been made with a different phone number. Do not ask for a name - it does not help this lookup.',\n    ...(scanErrors ? { warning: scanErrors + ' of ' + scans.length + ' schedule windows failed to load' } : {}) } }];\n}\nconst appointments = recs.map(publicView);\nconst persons = [...new Set(appointments.map(a => a.person).filter(Boolean))];\nreturn [{ json: { success: true, found: true, count: appointments.length, persons, appointments,\n  next_step: appointments.length === 1\n    ? 'Read this ONE appointment back to the caller - the name on it, the weekday, the date and the time - and ask whether that is the appointment they mean. Only after a clear yes call evolvo_manage_appointment with its ref and appointment_confirmed true.'\n    : 'Several appointments are on this phone number, possibly for different people. Name them one at a time (name on the appointment, weekday, date, time) and ask which one they mean. Only after the caller confirms ONE of them call evolvo_manage_appointment with that appointment ref and appointment_confirmed true.',\n  ...(scanErrors ? { warning: scanErrors + ' of ' + scans.length + ' schedule windows failed to load' } : {}) } }];\n"
+    "jsCode": "// Merge get_schedule_patient.php (patient-linked appointments) with a get_schedule.php scan\n// (catches Agenda/lead records, which get_schedule_patient.php does not return by phone - verified 2026-09-07).\n// 2026-09-09: matching is BY PHONE ONLY - the caller's spoken name is no longer used to filter,\n// because ASR mangles names badly. Every appointment on the phone is returned with the patient\n// name evolvo has on the record, and the agent must get an explicit yes on ONE of them.\nconst norm = s => (s || '').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');\nconst digits = p => { let d = (p || '').toString().replace(/\\D/g, ''); if (d.startsWith('0040')) d = d.slice(4); else if (d.startsWith('40') && d.length > 10) d = d.slice(2); return d.replace(/^0+/, ''); };\nconst samePhone = (a, b) => { const x = digits(a), y = digits(b); return x && y && (x === y || x.endsWith(y) || y.endsWith(x)); };\nconst nameOf = rec => rec.pacient || rec.patient || rec.name || '';\nconst STATE = { 'programat': 'scheduled', 'confirmat': 'confirmed', 'anulat': 'cancelled', 'incheiat': 'completed', 'nu s-a prezentat': 'no_show', 'trebuie reprogramat': 'needs_reschedule', 'reprogramat': 'rescheduled' };\nconst stateOf = rec => STATE[norm(rec.state)] || rec.state || null;\nconst isCancelled = rec => stateOf(rec) === 'cancelled';\n// Short, stable handle for one record: derived from the scheduleid, so it survives between the\n// find call and the manage call and does not depend on list order (an index would shift if a\n// record appeared or disappeared in between - and that would cancel the wrong appointment).\nconst hashRef = key => { let h = 5381; for (let i = 0; i < key.length; i++) h = ((h * 33) ^ key.charCodeAt(i)) >>> 0; return h.toString(36).toUpperCase().slice(-4).padStart(4, '0'); };\nfunction collect(q, patientResp, scanResps) {\n  let recs = [];\n  const pb = patientResp && patientResp.body;\n  if (patientResp && patientResp.statusCode === 200 && pb && pb.Result !== 'NOTFOUND') {\n    recs = recs.concat(Array.isArray(pb) ? pb : (pb.Records || pb.records || []));\n  }\n  let scanErrors = 0;\n  for (const r of scanResps) {\n    if (r.statusCode === 200 && Array.isArray(r.body)) recs = recs.concat(r.body.filter(x => samePhone(x.phone, q.phone)));\n    else scanErrors++;\n  }\n  const seen = new Set();\n  recs = recs.filter(x => { const k = x.scheduleid || (x.date + '|' + x.medic); if (seen.has(k)) return false; seen.add(k); return true; });\n  recs = recs.filter(r => !isCancelled(r));\n  recs.sort((a, b) => (a.date || '').localeCompare(b.date || ''));\n  const usedRefs = new Set();\n  for (const r of recs) {\n    let ref = hashRef(r.scheduleid || ((r.date || '') + '|' + (r.medic || '')));\n    let n = 1; while (usedRefs.has(ref)) ref = ref.slice(0, 3) + (n++).toString(36).toUpperCase();\n    usedRefs.add(ref); r._ref = ref;\n  }\n  return { recs, scanErrors };\n}\nconst publicView = rec => ({\n  ref: rec._ref,\n  person: nameOf(rec),\n  date: (rec.date || '').slice(0, 10),\n  time: (rec.date || '').slice(11, 16),\n  doctor: rec.medic || rec.doctor,\n  location: rec.workstation,\n  type: rec.type || null,\n  state: stateOf(rec),\n  kind: rec.form === 'Agenda' ? 'request_pending_staff_confirmation' : 'appointment',\n  manageable: Boolean(rec.scheduleid)\n});\n\nconst q = $('FIND Validate Input').first().json;\nif (q._error) return [{ json: q }];\nconst pr = $('FIND get_schedule_patient.php').first().json;\nconst scans = $('FIND get_schedule.php').all().map(i => i.json);\nif (pr.statusCode !== 200 && scans.every(r => r.statusCode !== 200)) {\n  return [{ json: { success: false, error: 'evolvo_api_error', step: 'find', status: pr.statusCode } }];\n}\nconst { recs, scanErrors } = collect(q, pr, scans);\n// ---- share this scan with MAN (2026-09-14) ----\n// Within one call, FIND then MAN scan the SAME 31 days for the SAME phone - 6 evolvo calls each.\n// The second scan is pure waste, so the collected records are parked against the conversation for a\n// short TTL and MAN reuses them. Refs are derived from the scheduleid, so a reused record keeps the\n// same ref the caller was read back. Short TTL because evolvo is the source of truth, not this.\nif (!scanErrors) {\n  const sd = $getWorkflowStaticData('global'); sd.scanCache = sd.scanCache || {};\n  const now = Date.now();\n  for (const k of Object.keys(sd.scanCache)) if (now - sd.scanCache[k].ts > 180000) delete sd.scanCache[k];\n  const conv = q.conversation_id;\n  if (conv && conv !== 'anon') sd.scanCache[conv + '|' + digits(q.phone)] = { recs, ts: now };\n}\nif (!recs.length) {\n  return [{ json: { success: true, found: false, count: 0,\n    message: 'No appointments found for this phone number in the next 31 days.',\n    hint: 'Ask whether the appointment might have been made with a different phone number. Do not ask for a name - it does not help this lookup.',\n    ...(scanErrors ? { warning: scanErrors + ' of ' + scans.length + ' schedule windows failed to load' } : {}) } }];\n}\nconst appointments = recs.map(publicView);\nconst persons = [...new Set(appointments.map(a => a.person).filter(Boolean))];\nreturn [{ json: { success: true, found: true, count: appointments.length, persons, appointments,\n  next_step: appointments.length === 1\n    ? 'Read this ONE appointment back to the caller - the name on it, the weekday, the date and the time - and ask whether that is the appointment they mean. Only after a clear yes call evolvo_manage_appointment with its ref and appointment_confirmed true.'\n    : 'Several appointments are on this phone number, possibly for different people. Name them one at a time (name on the appointment, weekday, date, time) and ask which one they mean. Only after the caller confirms ONE of them call evolvo_manage_appointment with that appointment ref and appointment_confirmed true.',\n  ...(scanErrors ? { warning: scanErrors + ' of ' + scans.length + ' schedule windows failed to load' } : {}) } }];\n"
    },
    "id": "find-format-results",
    "name": "FIND Format Results",
@@ -1715,7 +1715,7 @@
   },
   {
    "parameters": {
-    "jsCode": "// Merge get_schedule_patient.php (patient-linked appointments) with a get_schedule.php scan\n// (catches Agenda/lead records, which get_schedule_patient.php does not return by phone - verified 2026-09-07).\n// 2026-09-09: matching is BY PHONE ONLY - the caller's spoken name is no longer used to filter,\n// because ASR mangles names badly. Every appointment on the phone is returned with the patient\n// name evolvo has on the record, and the agent must get an explicit yes on ONE of them.\nconst norm = s => (s || '').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');\nconst digits = p => { let d = (p || '').toString().replace(/\\D/g, ''); if (d.startsWith('0040')) d = d.slice(4); else if (d.startsWith('40') && d.length > 10) d = d.slice(2); return d.replace(/^0+/, ''); };\nconst samePhone = (a, b) => { const x = digits(a), y = digits(b); return x && y && (x === y || x.endsWith(y) || y.endsWith(x)); };\nconst nameOf = rec => rec.pacient || rec.patient || rec.name || '';\nconst STATE = { 'programat': 'scheduled', 'confirmat': 'confirmed', 'anulat': 'cancelled', 'incheiat': 'completed', 'nu s-a prezentat': 'no_show', 'trebuie reprogramat': 'needs_reschedule', 'reprogramat': 'rescheduled' };\nconst stateOf = rec => STATE[norm(rec.state)] || rec.state || null;\nconst isCancelled = rec => stateOf(rec) === 'cancelled';\n// Short, stable handle for one record: derived from the scheduleid, so it survives between the\n// find call and the manage call and does not depend on list order (an index would shift if a\n// record appeared or disappeared in between - and that would cancel the wrong appointment).\nconst hashRef = key => { let h = 5381; for (let i = 0; i < key.length; i++) h = ((h * 33) ^ key.charCodeAt(i)) >>> 0; return h.toString(36).toUpperCase().slice(-4).padStart(4, '0'); };\nfunction collect(q, patientResp, scanResps) {\n  let recs = [];\n  const pb = patientResp && patientResp.body;\n  if (patientResp && patientResp.statusCode === 200 && pb && pb.Result !== 'NOTFOUND') {\n    recs = recs.concat(Array.isArray(pb) ? pb : (pb.Records || pb.records || []));\n  }\n  let scanErrors = 0;\n  for (const r of scanResps) {\n    if (r.statusCode === 200 && Array.isArray(r.body)) recs = recs.concat(r.body.filter(x => samePhone(x.phone, q.phone)));\n    else scanErrors++;\n  }\n  const seen = new Set();\n  recs = recs.filter(x => { const k = x.scheduleid || (x.date + '|' + x.medic); if (seen.has(k)) return false; seen.add(k); return true; });\n  recs = recs.filter(r => !isCancelled(r));\n  recs.sort((a, b) => (a.date || '').localeCompare(b.date || ''));\n  const usedRefs = new Set();\n  for (const r of recs) {\n    let ref = hashRef(r.scheduleid || ((r.date || '') + '|' + (r.medic || '')));\n    let n = 1; while (usedRefs.has(ref)) ref = ref.slice(0, 3) + (n++).toString(36).toUpperCase();\n    usedRefs.add(ref); r._ref = ref;\n  }\n  return { recs, scanErrors };\n}\nconst publicView = rec => ({\n  ref: rec._ref,\n  person: nameOf(rec),\n  date: (rec.date || '').slice(0, 10),\n  time: (rec.date || '').slice(11, 16),\n  doctor: rec.medic || rec.doctor,\n  location: rec.workstation,\n  type: rec.type || null,\n  state: stateOf(rec),\n  kind: rec.form === 'Agenda' ? 'request_pending_staff_confirmation' : 'appointment',\n  manageable: Boolean(rec.scheduleid)\n});\n\nconst q = $('MAN Validate Input').first().json;\nconst pr = $('MAN get_schedule_patient.php').first().json;\nconst scans = $('MAN get_schedule.php').all().map(i => i.json);\nif (pr.statusCode !== 200 && scans.every(r => r.statusCode !== 200)) {\n  return [{ json: { _error: true, success: false, error: 'evolvo_api_error', step: 'find', status: pr.statusCode } }];\n}\n// NOTE 2026-09-07: evolvo update_schedule.php rejects state 0 ('unknown status'), so a cancelled record cannot be set back to Programat via the API - no 'restore' action possible.\nconst { recs } = collect(q, pr, scans);\nif (!recs.length) {\n  return [{ json: { _error: true, success: false, error: 'not_found',\n    message: 'No appointments found for this phone number in the next 31 days.' } }];\n}\nlet target = null;\nif (q.ref) {\n  target = recs.find(r => r._ref === q.ref) || null;\n  if (!target) {\n    return [{ json: { _error: true, success: false, error: 'appointment_not_found',\n      message: 'That appointment reference is not among the appointments on this phone number any more.',\n      appointments: recs.map(publicView) } }];\n  }\n  // Cross-check: if the agent also sent the date it read out to the caller, it must be the date of\n  // the record the ref points at. Guards against a ref copied from the wrong line of the list.\n  if (q.date && !(target.date || '').startsWith(q.date)) {\n    return [{ json: { _error: true, success: false, error: 'ref_date_mismatch',\n      message: 'Nothing was changed: the appointment reference and the date you sent point at different appointments.',\n      hint: 'Read the list again, pick the ONE line the caller confirmed, and send that line\\'s ref together with that line\\'s date.',\n      appointments: recs.map(publicView) } }];\n  }\n} else {\n  const onDate = recs.filter(r => (r.date || '').startsWith(q.date));\n  if (!onDate.length) {\n    return [{ json: { _error: true, success: false, error: 'appointment_not_found',\n      message: 'No appointment on that date for this phone number.',\n      appointments: recs.map(publicView) } }];\n  }\n  if (onDate.length > 1) {\n    return [{ json: { _error: true, success: false, error: 'ambiguous_appointment',\n      message: 'Several appointments sit on that date for this phone number. Nothing was changed.',\n      hint: 'Read them back one at a time (name on the appointment, time, doctor) and ask which one the caller means, then call again with that appointment ref.',\n      appointments: onDate.map(publicView) } }];\n  }\n  target = onDate[0];\n}\n// ---- appointment read-back gate (server-side) ----\n// Identification is phone-only now, so the caller's explicit yes on THIS appointment is the whole\n// safeguard against touching a family member's booking. The agent reports that yes with\n// appointment_confirmed=true; a call without it is refused with the exact wording to read back,\n// and a call that flips the flag less than 5 s after the refusal is refused again (no real\n// read-back could fit in that time). Same pattern as the phone_confirmed gate. There is no undo:\n// evolvo cannot restore a cancelled record.\n{\n  const sd = $getWorkflowStaticData('global'); sd.apptGate = sd.apptGate || {};\n  const now = Date.now();\n  for (const k of Object.keys(sd.apptGate)) if (now - sd.apptGate[k] > 2 * 3600 * 1000) delete sd.apptGate[k];\n  const gateKey = (q.conversation_id || 'anon') + '|' + target._ref + '|' + q.action;\n  const firstRefusal = sd.apptGate[gateKey];\n  if (!q.appointment_confirmed || (firstRefusal && now - firstRefusal < 5000)) {\n    if (!firstRefusal) sd.apptGate[gateKey] = now;\n    const v = publicView(target);\n    return [{ json: { _error: true, success: false, error: 'confirm_appointment_first',\n      appointment: v,\n      read_back: v.person + ' — ' + v.date + ' ' + v.time + (v.doctor ? ' (' + v.doctor + ')' : ''),\n      message: 'NOTHING WAS CHANGED. First name this one appointment to the caller in their own language - the name on the appointment, the weekday, the date and the time - ask whether that is the one they want changed, and END your turn. Only after the caller answers yes, call this tool again with exactly the same ref and action and appointment_confirmed set to true. If the caller says it is the wrong one, call evolvo_find_appointments again or use another ref from the list.' } }];\n  }\n}\nif (!target.scheduleid) {\n  return [{ json: { _error: true, success: false, error: 'not_supported_yet',\n    message: 'The clinic API does not expose the id needed to modify this appointment. Tell the caller the clinic staff will handle the change and their request has been noted.' } }];\n}\nreturn [{ json: { scheduleid: target.scheduleid, state: q.state, obs: q.obs, action: q.action,\n  summary: publicView(target) } }];\n"
+    "jsCode": "// Merge get_schedule_patient.php (patient-linked appointments) with a get_schedule.php scan\n// (catches Agenda/lead records, which get_schedule_patient.php does not return by phone - verified 2026-09-07).\n// 2026-09-09: matching is BY PHONE ONLY - the caller's spoken name is no longer used to filter,\n// because ASR mangles names badly. Every appointment on the phone is returned with the patient\n// name evolvo has on the record, and the agent must get an explicit yes on ONE of them.\nconst norm = s => (s || '').toString().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');\nconst digits = p => { let d = (p || '').toString().replace(/\\D/g, ''); if (d.startsWith('0040')) d = d.slice(4); else if (d.startsWith('40') && d.length > 10) d = d.slice(2); return d.replace(/^0+/, ''); };\nconst samePhone = (a, b) => { const x = digits(a), y = digits(b); return x && y && (x === y || x.endsWith(y) || y.endsWith(x)); };\nconst nameOf = rec => rec.pacient || rec.patient || rec.name || '';\nconst STATE = { 'programat': 'scheduled', 'confirmat': 'confirmed', 'anulat': 'cancelled', 'incheiat': 'completed', 'nu s-a prezentat': 'no_show', 'trebuie reprogramat': 'needs_reschedule', 'reprogramat': 'rescheduled' };\nconst stateOf = rec => STATE[norm(rec.state)] || rec.state || null;\nconst isCancelled = rec => stateOf(rec) === 'cancelled';\n// Short, stable handle for one record: derived from the scheduleid, so it survives between the\n// find call and the manage call and does not depend on list order (an index would shift if a\n// record appeared or disappeared in between - and that would cancel the wrong appointment).\nconst hashRef = key => { let h = 5381; for (let i = 0; i < key.length; i++) h = ((h * 33) ^ key.charCodeAt(i)) >>> 0; return h.toString(36).toUpperCase().slice(-4).padStart(4, '0'); };\nfunction collect(q, patientResp, scanResps) {\n  let recs = [];\n  const pb = patientResp && patientResp.body;\n  if (patientResp && patientResp.statusCode === 200 && pb && pb.Result !== 'NOTFOUND') {\n    recs = recs.concat(Array.isArray(pb) ? pb : (pb.Records || pb.records || []));\n  }\n  let scanErrors = 0;\n  for (const r of scanResps) {\n    if (r.statusCode === 200 && Array.isArray(r.body)) recs = recs.concat(r.body.filter(x => samePhone(x.phone, q.phone)));\n    else scanErrors++;\n  }\n  const seen = new Set();\n  recs = recs.filter(x => { const k = x.scheduleid || (x.date + '|' + x.medic); if (seen.has(k)) return false; seen.add(k); return true; });\n  recs = recs.filter(r => !isCancelled(r));\n  recs.sort((a, b) => (a.date || '').localeCompare(b.date || ''));\n  const usedRefs = new Set();\n  for (const r of recs) {\n    let ref = hashRef(r.scheduleid || ((r.date || '') + '|' + (r.medic || '')));\n    let n = 1; while (usedRefs.has(ref)) ref = ref.slice(0, 3) + (n++).toString(36).toUpperCase();\n    usedRefs.add(ref); r._ref = ref;\n  }\n  return { recs, scanErrors };\n}\nconst publicView = rec => ({\n  ref: rec._ref,\n  person: nameOf(rec),\n  date: (rec.date || '').slice(0, 10),\n  time: (rec.date || '').slice(11, 16),\n  doctor: rec.medic || rec.doctor,\n  location: rec.workstation,\n  type: rec.type || null,\n  state: stateOf(rec),\n  kind: rec.form === 'Agenda' ? 'request_pending_staff_confirmation' : 'appointment',\n  manageable: Boolean(rec.scheduleid)\n});\n\nconst q = $('MAN Validate Input').first().json;\n// Either FIND's scan was reused (MAN Scan Cached? routed straight here and the evolvo nodes never\n// ran, so referencing them would throw) or we scanned ourselves.\nlet cached = null;\ntry { const cc = $('MAN Scan Cache').first().json; if (cc && cc._cache_hit && Array.isArray(cc._cached_recs)) cached = cc._cached_recs; } catch (e) {}\nlet recs;\nif (cached) {\n  recs = cached;  // already deduped, cancelled ones dropped, sorted, each carrying its _ref\n} else {\n  const pr = $('MAN get_schedule_patient.php').first().json;\n  const scans = $('MAN get_schedule.php').all().map(i => i.json);\n  if (pr.statusCode !== 200 && scans.every(r => r.statusCode !== 200)) {\n    return [{ json: { _error: true, success: false, error: 'evolvo_api_error', step: 'find', status: pr.statusCode } }];\n  }\n  recs = collect(q, pr, scans).recs;\n}\n// NOTE 2026-09-07: evolvo update_schedule.php rejects state 0 ('unknown status'), so a cancelled record cannot be set back to Programat via the API - no 'restore' action possible.\n\nif (!recs.length) {\n  return [{ json: { _error: true, success: false, error: 'not_found',\n    message: 'No appointments found for this phone number in the next 31 days.' } }];\n}\nlet target = null;\nif (q.ref) {\n  target = recs.find(r => r._ref === q.ref) || null;\n  if (!target) {\n    return [{ json: { _error: true, success: false, error: 'appointment_not_found',\n      message: 'That appointment reference is not among the appointments on this phone number any more.',\n      appointments: recs.map(publicView) } }];\n  }\n  // Cross-check: if the agent also sent the date it read out to the caller, it must be the date of\n  // the record the ref points at. Guards against a ref copied from the wrong line of the list.\n  if (q.date && !(target.date || '').startsWith(q.date)) {\n    return [{ json: { _error: true, success: false, error: 'ref_date_mismatch',\n      message: 'Nothing was changed: the appointment reference and the date you sent point at different appointments.',\n      hint: 'Read the list again, pick the ONE line the caller confirmed, and send that line\\'s ref together with that line\\'s date.',\n      appointments: recs.map(publicView) } }];\n  }\n} else {\n  const onDate = recs.filter(r => (r.date || '').startsWith(q.date));\n  if (!onDate.length) {\n    return [{ json: { _error: true, success: false, error: 'appointment_not_found',\n      message: 'No appointment on that date for this phone number.',\n      appointments: recs.map(publicView) } }];\n  }\n  if (onDate.length > 1) {\n    return [{ json: { _error: true, success: false, error: 'ambiguous_appointment',\n      message: 'Several appointments sit on that date for this phone number. Nothing was changed.',\n      hint: 'Read them back one at a time (name on the appointment, time, doctor) and ask which one the caller means, then call again with that appointment ref.',\n      appointments: onDate.map(publicView) } }];\n  }\n  target = onDate[0];\n}\n// ---- appointment read-back gate (server-side) ----\n// Identification is phone-only now, so the caller's explicit yes on THIS appointment is the whole\n// safeguard against touching a family member's booking. The agent reports that yes with\n// appointment_confirmed=true; a call without it is refused with the exact wording to read back,\n// and a call that flips the flag less than 5 s after the refusal is refused again (no real\n// read-back could fit in that time). Same pattern as the phone_confirmed gate. There is no undo:\n// evolvo cannot restore a cancelled record.\n{\n  const sd = $getWorkflowStaticData('global'); sd.apptGate = sd.apptGate || {};\n  const now = Date.now();\n  for (const k of Object.keys(sd.apptGate)) if (now - sd.apptGate[k] > 2 * 3600 * 1000) delete sd.apptGate[k];\n  const gateKey = (q.conversation_id || 'anon') + '|' + target._ref + '|' + q.action;\n  const firstRefusal = sd.apptGate[gateKey];\n  if (!q.appointment_confirmed || (firstRefusal && now - firstRefusal < 5000)) {\n    if (!firstRefusal) sd.apptGate[gateKey] = now;\n    const v = publicView(target);\n    return [{ json: { _error: true, success: false, error: 'confirm_appointment_first',\n      appointment: v,\n      read_back: v.person + ' — ' + v.date + ' ' + v.time + (v.doctor ? ' (' + v.doctor + ')' : ''),\n      message: 'NOTHING WAS CHANGED. First name this one appointment to the caller in their own language - the name on the appointment, the weekday, the date and the time - ask whether that is the one they want changed, and END your turn. Only after the caller answers yes, call this tool again with exactly the same ref and action and appointment_confirmed set to true. If the caller says it is the wrong one, call evolvo_find_appointments again or use another ref from the list.' } }];\n  }\n}\nif (!target.scheduleid) {\n  return [{ json: { _error: true, success: false, error: 'not_supported_yet',\n    message: 'The clinic API does not expose the id needed to modify this appointment. Tell the caller the clinic staff will handle the change and their request has been noted.' } }];\n}\nreturn [{ json: { scheduleid: target.scheduleid, state: q.state, obs: q.obs, action: q.action,\n  summary: publicView(target) } }];\n"
    },
    "id": "man-find-target",
    "name": "MAN Find Target",
@@ -1797,7 +1797,7 @@
   },
   {
    "parameters": {
-    "jsCode": "const r = $input.first().json;\nconst t = $('MAN Find Target').first().json;\nif (r.statusCode === 200 && r.body && r.body.Result === 'OK') {\n  // ---- reschedule hand-off (2026-09-14) ----\n  // evolvo state 3 (\"Trebuie reprogramat\") keeps HOLDING the slot - only state 2 (cancel) frees it\n  // (measured: cancel releases the slot in ~8 s, state 3 never does). So the old record is only\n  // remembered here; BOOK cancels it once the replacement booking has actually succeeded.\n  // Cancelling at mark-time instead would leave the caller with nothing if no new slot suited them.\n  if (t.action === 'reschedule' && t.scheduleid) {\n    const q = $('MAN Validate Input').first().json;\n    const sd = $getWorkflowStaticData('global'); sd.pendingResched = sd.pendingResched || {};\n    const now = Date.now();\n    for (const k of Object.keys(sd.pendingResched)) if (now - sd.pendingResched[k].ts > 6 * 3600 * 1000) delete sd.pendingResched[k];\n    const v = t.summary || {};\n    if (q.conversation_id && q.conversation_id !== 'anon') {\n      sd.pendingResched[q.conversation_id] = { scheduleid: t.scheduleid, phone: q.phone,\n        ref: v.ref, person: v.person, date: v.date, time: v.time,\n        doctor: v.doctor, location: v.location, ts: now };\n    }\n  }\n  return [{ json: { success: true, action: t.action, appointment: t.summary,\n    note: t.action === 'reschedule'\n      ? 'Marked as needing reschedule. Now use check_availability + book_appointment for the new slot - booking it cancels this one automatically and frees its slot.'\n      : 'Done.' } }];\n}\nreturn [{ json: { success: false, error: 'update_failed', status: r.statusCode,\n  api_response: r.body } }];"
+    "jsCode": "const r = $input.first().json;\nconst t = $('MAN Find Target').first().json;\nif (r.statusCode === 200 && r.body && r.body.Result === 'OK') {\n  // ---- reschedule hand-off (2026-09-14) ----\n  // evolvo state 3 (\"Trebuie reprogramat\") keeps HOLDING the slot - only state 2 (cancel) frees it\n  // (measured: cancel releases the slot in ~8 s, state 3 never does). So the old record is only\n  // remembered here; BOOK cancels it once the replacement booking has actually succeeded.\n  // Cancelling at mark-time instead would leave the caller with nothing if no new slot suited them.\n  if (t.action === 'reschedule' && t.scheduleid) {\n    const q = $('MAN Validate Input').first().json;\n    const sd = $getWorkflowStaticData('global'); sd.pendingResched = sd.pendingResched || {};\n    const now = Date.now();\n    for (const k of Object.keys(sd.pendingResched)) if (now - sd.pendingResched[k].ts > 6 * 3600 * 1000) delete sd.pendingResched[k];\n    const v = t.summary || {};\n    if (q.conversation_id && q.conversation_id !== 'anon') {\n      sd.pendingResched[q.conversation_id] = { scheduleid: t.scheduleid, phone: q.phone,\n        ref: v.ref, person: v.person, date: v.date, time: v.time,\n        doctor: v.doctor, location: v.location, ts: now };\n    }\n  }\n  // The record just changed, so FIND's cached scan is stale - drop it rather than let a later\n  // step in this call act on a state that no longer exists.\n  {\n    const q = $('MAN Validate Input').first().json;\n    try { const cc = $('MAN Scan Cache').first().json; if (cc && cc._cache_key) { const sd = $getWorkflowStaticData('global'); if (sd.scanCache) delete sd.scanCache[cc._cache_key]; } } catch (e) {}\n  }\n  return [{ json: { success: true, action: t.action, appointment: t.summary,\n    // a cancel is the only action that frees a slot, so it is the only one worth re-checking\n    _check_release: t.action === 'cancel',\n    note: t.action === 'reschedule'\n      ? 'Marked as needing reschedule. Now use check_availability + book_appointment for the new slot - booking it cancels this one automatically and frees its slot.'\n      : 'Done.' } }];\n}\nreturn [{ json: { success: false, error: 'update_failed', status: r.statusCode,\n  api_response: r.body } }];"
    },
    "id": "man-format-update",
    "name": "MAN Format Update",
@@ -2422,7 +2422,7 @@
   },
   {
    "parameters": {
-    "jsCode": "// Build get_schedule.php windows covering today .. today+31d (API max), 7 days per call.\nconst prev = $input.first().json;\nif (prev._error) return [{ json: prev }];\nconst today = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Bucharest' }));\nconst out = [];\nfor (const [offset, days] of [[0,7],[7,7],[14,7],[21,7],[28,3]]) {\n  const d = new Date(today); d.setDate(d.getDate() + offset);\n  out.push({ json: { atdate: d.toISOString().slice(0,10), interval: String(days) } });\n}\nreturn out;"
+    "jsCode": "// Build get_schedule.php windows covering today .. today+31d (API max), 7 days per call.\nconst prev = $input.first().json;\nif (prev._error) return [{ json: prev }];\nconst today = new Date(new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Bucharest' }));\nconst out = [];\nfor (const [offset, days] of [[0,7],[7,7],[14,7],[21,7],[28,3]]) {\n  const d = new Date(today); d.setDate(d.getDate() + offset);\n  out.push({ json: { atdate: d.toISOString().slice(0,10), interval: String(days), _days: days } });\n}\n// ---- narrow to one window when the caller named a date (2026-09-14) ----\n// \"my appointment on the 16th\" does not need 31 days scanned. Keep the single 7-day window that\n// contains that date - same proven interval semantics, 5 calls down to 1. If the date falls outside\n// the scanned range we keep all five rather than returning nothing.\nconst q = $('MAN Validate Input').first().json;\nif (q && q.date) {\n  const inWindow = out.filter(o => {\n    const s = new Date(o.json.atdate); const e = new Date(s); e.setDate(e.getDate() + o.json._days);\n    const t = new Date(q.date); return t >= s && t < e;\n  });\n  if (inWindow.length) return inWindow.map(o => ({ json: { atdate: o.json.atdate, interval: o.json.interval } }));\n}\nreturn out.map(o => ({ json: { atdate: o.json.atdate, interval: o.json.interval } }));"
    },
    "name": "MAN Scan Windows",
    "type": "n8n-nodes-base.code",
@@ -2690,6 +2690,171 @@
    "position": [
     4880,
     1312
+   ]
+  },
+  {
+   "parameters": {
+    "jsCode": "// Reuse the 31-day scan FIND already did in this same call (2026-09-14).\n// FIND and MAN otherwise run the identical 6 evolvo calls for the same phone, seconds apart. On a\n// hit we skip get_schedule_patient.php AND the five get_schedule.php windows entirely.\n// Evolvo stays the source of truth: the TTL is short, the entry is dropped the moment MAN changes\n// anything, and update_schedule.php still validates the scheduleid we send.\nconst prev = $input.first().json;\nif (prev._error) return [{ json: prev }];\nconst q = $('MAN Validate Input').first().json;\nconst digits = p => { let d = (p || '').toString().replace(/\\D/g, ''); if (d.startsWith('0040')) d = d.slice(4); else if (d.startsWith('40') && d.length > 10) d = d.slice(2); return d.replace(/^0+/, ''); };\nconst sd = $getWorkflowStaticData('global'); sd.scanCache = sd.scanCache || {};\nconst now = Date.now();\nfor (const k of Object.keys(sd.scanCache)) if (now - sd.scanCache[k].ts > 180000) delete sd.scanCache[k];\nconst conv = q.conversation_id;\nconst key = (conv && conv !== 'anon') ? conv + '|' + digits(q.phone) : null;\nconst hit = key ? sd.scanCache[key] : null;\nreturn [{ json: { ...prev, _cache_key: key, _cache_hit: Boolean(hit), _cached_recs: hit ? hit.recs : [] } }];"
+   },
+   "id": "man-scan-cache",
+   "name": "MAN Scan Cache",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    1700,
+    2362
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "boolean": [
+      {
+       "value1": "={{ Boolean($json._cache_hit) }}",
+       "value2": true
+      }
+     ]
+    }
+   },
+   "id": "man-scan-cached",
+   "name": "MAN Scan Cached?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 1,
+   "position": [
+    1870,
+    2362
+   ]
+  },
+  {
+   "parameters": {
+    "conditions": {
+     "boolean": [
+      {
+       "value1": "={{ Boolean($json._check_release) }}",
+       "value2": true
+      }
+     ]
+    }
+   },
+   "id": "man-release-check",
+   "name": "MAN Release Check?",
+   "type": "n8n-nodes-base.if",
+   "typeVersion": 1,
+   "position": [
+    3304,
+    2512
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://secure.mydroot.eu/evolvo/api/thirdpartyai/get_info.php",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "Authorization",
+       "value": "=Bearer {{ $('MAN Token').first().json.token }}"
+      }
+     ]
+    },
+    "sendBody": true,
+    "contentType": "multipart-form-data",
+    "bodyParameters": {
+     "parameters": [
+      {
+       "name": "lng",
+       "value": "1"
+      }
+     ]
+    },
+    "options": {
+     "response": {
+      "response": {
+       "fullResponse": true,
+       "neverError": true
+      }
+     }
+    }
+   },
+   "id": "man-rel-get-info",
+   "name": "MAN rel get_info.php",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    3504,
+    2372
+   ]
+  },
+  {
+   "parameters": {
+    "jsCode": "// Match the cancelled appointment's provider+branch to a calendarid so we can ask evolvo whether the\n// slot is genuinely free again, rather than telling the caller it is and hoping (2026-09-14).\nconst upd = $('MAN Format Update').first().json;\nconst a = upd.appointment || {};\nconst r = $input.first().json;\nconst norm = s => (s || '').toString().toLowerCase().normalize('NFD').replace(/[\\u0300-\\u036f]/g, '').replace(/\\s+/g, ' ').trim();\nconst cals = (r.statusCode === 200 && r.body && r.body.Calendars) ? r.body.Calendars : [];\nconst match = cals.find(c => norm(c.name || c.doctor_name) === norm(a.doctor) && norm(c.workstation) === norm(a.location));\n// date_from must be a future date for evolvo; a same-day or past appointment cannot be re-checked.\nconst today = new Date().toLocaleDateString('en-CA', { timeZone: 'Europe/Bucharest' });\nif (!match || !a.date || a.date <= today) {\n  return [{ json: { _skip: true, reason: !match ? 'calendar_not_matched' : 'date_not_future' } }];\n}\nreturn [{ json: { _skip: false, calendarid: match.calendarid, date_from: a.date, want_date: a.date, want_time: a.time } }];"
+   },
+   "id": "man-rel-find-cal",
+   "name": "MAN rel Find Calendar",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    3704,
+    2372
+   ]
+  },
+  {
+   "parameters": {
+    "method": "POST",
+    "url": "https://secure.mydroot.eu/evolvo/api/thirdpartyai/get_work_days.php",
+    "sendHeaders": true,
+    "headerParameters": {
+     "parameters": [
+      {
+       "name": "Authorization",
+       "value": "=Bearer {{ $('MAN Token').first().json.token }}"
+      }
+     ]
+    },
+    "sendBody": true,
+    "contentType": "multipart-form-data",
+    "bodyParameters": {
+     "parameters": [
+      {
+       "name": "calendarid",
+       "value": "={{ $json.calendarid }}"
+      },
+      {
+       "name": "date_from",
+       "value": "={{ $json.date_from }}"
+      }
+     ]
+    },
+    "options": {
+     "response": {
+      "response": {
+       "fullResponse": true,
+       "neverError": true
+      }
+     }
+    }
+   },
+   "id": "man-rel-work-days",
+   "name": "MAN rel get_work_days.php",
+   "type": "n8n-nodes-base.httpRequest",
+   "typeVersion": 4.2,
+   "position": [
+    3904,
+    2372
+   ]
+  },
+  {
+   "parameters": {
+    "jsCode": "// Final MAN response. Reports whether the cancelled slot actually came back, as a field the agent can\n// read instead of an assumption it has to make (2026-09-14, asked for by the ElevenLabs side).\nconst base = { ...$('MAN Format Update').first().json };\nconst wanted = base._check_release;\ndelete base._check_release;\nif (!wanted) return [{ json: base }];\n\nlet status = 'unknown', freeTimes = null, skip = null;\ntry { const s = $('MAN rel Find Calendar').first().json; if (s && s._skip) skip = s.reason; } catch (e) { skip = 'not_checked'; }\nif (!skip) {\n  try {\n    const s = $('MAN rel Find Calendar').first().json;\n    const r = $input.first().json;\n    if (r.statusCode === 200 && r.body && Array.isArray(r.body.Records)) {\n      const day = r.body.Records.find(d => (d.wday || '').slice(0, 10) === s.want_date);\n      freeTimes = day ? (day.free_timespace || []).map(x => (x.slot || '').slice(0, 5)) : [];\n      if (freeTimes.includes(s.want_time)) status = 'released';\n      else if (freeTimes.length) status = 'still_blocked';\n      else status = 'unknown';   // the whole day is gone from the calendar - fully booked, or not a working day\n    } else status = 'check_failed';\n  } catch (e) { status = 'check_failed'; }\n} else {\n  status = skip === 'date_not_future' ? 'not_checkable_same_day' : 'check_failed';\n}\n\nbase.slot_released = status === 'released';\nbase.slot_release_status = status;\nconst a = base.appointment || {};\nconst when = (a.date || '') + ' ' + (a.time || '');\nif (status === 'released') {\n  base.note = 'Cancelled, and the ' + when + ' slot is free again - it can be booked straight away.';\n} else if (status === 'still_blocked') {\n  base.note = 'Cancelled. The ' + when + ' slot has NOT reappeared yet, so do not tell the caller that time is available again; offer to look for another time.';\n} else {\n  base.note = 'Cancelled. We could not verify whether the ' + when + ' slot reopened, so do not claim it is bookable again.';\n}\nreturn [{ json: base }];"
+   },
+   "id": "man-release-done",
+   "name": "MAN Release Done",
+   "type": "n8n-nodes-base.code",
+   "typeVersion": 2,
+   "position": [
+    4104,
+    2512
    ]
   }
  ],
@@ -3441,7 +3606,7 @@
     ],
     [
      {
-      "node": "MAN get_schedule_patient.php",
+      "node": "MAN Scan Cache",
       "type": "main",
       "index": 0
      }
@@ -3825,6 +3990,97 @@
     [
      {
       "node": "BOOK Resched Done",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "MAN Scan Cache": {
+   "main": [
+    [
+     {
+      "node": "MAN Scan Cached?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "MAN Scan Cached?": {
+   "main": [
+    [
+     {
+      "node": "MAN Find Target",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "MAN get_schedule_patient.php",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "MAN Format Update": {
+   "main": [
+    [
+     {
+      "node": "MAN Release Check?",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "MAN Release Check?": {
+   "main": [
+    [
+     {
+      "node": "MAN rel get_info.php",
+      "type": "main",
+      "index": 0
+     }
+    ],
+    [
+     {
+      "node": "MAN Release Done",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "MAN rel get_info.php": {
+   "main": [
+    [
+     {
+      "node": "MAN rel Find Calendar",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "MAN rel Find Calendar": {
+   "main": [
+    [
+     {
+      "node": "MAN rel get_work_days.php",
+      "type": "main",
+      "index": 0
+     }
+    ]
+   ]
+  },
+  "MAN rel get_work_days.php": {
+   "main": [
+    [
+     {
+      "node": "MAN Release Done",
       "type": "main",
       "index": 0
      }

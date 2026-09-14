@@ -3,6 +3,38 @@
 Newest first. Every entry is a change to the live workflow **Optofarm - WIP**
 (`jLUnlrt9zM8VWZvp`) on `https://n8n.splitagency.biz.id`.
 
+## 2026-09-14 (evening) — `slot_released`, and the cancel path from 7 evolvo calls to 3
+
+Answers the round in [`REQUESTS_FROM_ELEVENLABS.md`](REQUESTS_FROM_ELEVENLABS.md). 115 → **122 nodes**.
+
+- **`slot_released` on every successful cancel.** The agent was telling callers the time was bookable
+  again on the strength of our ~8 s finding, not on anything the response said. It now re-queries the
+  provider's calendar after the cancel and reports `slot_released` + `slot_release_status`
+  (`released` / `still_blocked` / `unknown` / `not_checkable_same_day` / `check_failed`), with the
+  `note` already phrased for the caller. New nodes `MAN Release Check?` → `MAN rel get_info.php` →
+  `MAN rel Find Calendar` → `MAN rel get_work_days.php` → `MAN Release Done` (now the MAN responder).
+  Only `cancel` is checked — `confirm` and `reschedule` do not free a slot.
+- **`unknown` is deliberately distinct from `still_blocked`.** Absence from the free list does not
+  prove a slot is blocked; the provider may simply not be working then. This came out of trying to
+  verify a specific smoke-test record and discovering its calendar alternates morning and afternoon
+  shifts by day — see the reply in `REQUESTS_FROM_ELEVENLABS.md`.
+- **FIND's scan is now shared with MAN.** Within one conversation both branches scanned the same 31
+  days for the same phone, seconds apart — 6 evolvo calls each. `FIND Format Results` parks the
+  collected records in `sd.scanCache[conversation_id|phone]` (180 s TTL) and the new
+  `MAN Scan Cache` → `MAN Scan Cached?` pair bypasses `get_schedule_patient.php` and all five
+  `get_schedule.php` windows on a hit. Refs are `scheduleid` hashes, so a reused record keeps the ref
+  the caller was read back. The entry is dropped as soon as MAN changes anything.
+- **MAN narrows the scan to one window** when it has a `date`, instead of five. Falls back to all
+  five if the date is outside the scanned range.
+- **Parallel window fetch deliberately NOT done** — the unexplained Apache 403 in
+  `QUESTIONS_FOR_IMREH.md` §3 makes five concurrent calls the wrong risk for a saving the cache has
+  already delivered.
+- `FIND Validate Input` now emits `conversation_id` (BOOK already did).
+- Measured on a live cancel: **3 evolvo calls, 1.4 s** with the release check included; 5 on a
+  cache miss. Was 7.
+- Asked Imreh whether a phone lookup can cover agenda entries (question 12) — that would remove the
+  scan altogether.
+
 ## 2026-09-14 (later) — answered the QA follow-ups; no workflow change
 
 Took up items 4 and 5 of [`../elevenlabs/qa-followups.md`](../elevenlabs/qa-followups.md), which
