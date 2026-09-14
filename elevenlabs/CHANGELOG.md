@@ -4,6 +4,45 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-15 (late night, 2) — a successful booking no longer promises a callback
+
+Client correction: **nobody rings a caller back after a booking succeeds.** The only thing they
+receive is the reminder before the appointment, which the agent already says correctly. The callback
+promise was left over from when `lead_pending_staff_confirmation` was understood as "a request that
+staff still have to action", and it was making a finished appointment sound unfinished — the caller
+hangs up expecting a phone call that never comes.
+
+The rule now: **when `success` is true the appointment is made, whatever `booking_mode` says.** Both
+modes are simply booked as far as the caller is concerned, said in the same final tone, followed by
+the reminder sentence and nothing else. `booking_mode` is never mentioned to a caller.
+
+Changed in the four places that carried it, so they cannot drift apart:
+
+| Where | Was | Now |
+|---|---|---|
+| System prompt, *Appointment flow* | *"say the request is registered… and that a colleague will call back about it"* | booked in the same final tone either way, then the reminder; never a callback on a booking that succeeded |
+| System prompt, *What the caller is told they will receive* | the reminder sentence | + *"That reminder is the ONLY thing a caller is ever told they will receive after a booking — no confirmation, and no phone call from a colleague."* |
+| `booking` procedure, book step (`agtprcv_8801m2gj1qkafygtq7frfmck21k9`) | same callback line | same rule, with the reason spelled out: it leaves them waiting for a call that never comes |
+| `evolvo_book_appointment` description | *"say the time is registered and that a colleague will call back about it"* | `booking_mode` explained as internal-only; **NEVER TELL A CALLER A COLLEAGUE WILL RING THEM BACK ABOUT A BOOKING THAT SUCCEEDED** |
+
+Also applied to the **reschedule** path in `cancel_or_reschedule`
+(`agtprcv_4901m2gj1qkqevjb2ar3p0nqd450`), which ends in a booking and carried the same promise.
+
+### What deliberately kept its callback promise
+
+A callback is still the right thing to say wherever the booking **did not happen**, and every one of
+those was left alone — removing them would have been the opposite error:
+
+- the booking tool erroring, timing out or being unreachable;
+- `evolvo_log_request` succeeding — that IS a callback request, and the procedure now says so
+  explicitly (*"This is a callback request, not a booking, so here a colleague calling back is
+  exactly right and must be said"*) so the new rule cannot bleed into it;
+- a reschedule where no new time could be booked — the old appointment still holds its slot and a
+  colleague does pick it up;
+- no appointment found on the number, and the unknown-information protocol.
+
+Four mentions survive in the prompt, all checked individually and all on those paths.
+
 ## 2026-09-15 (late night) — `conv_5301m2ggh93feecvv9cahfg7pymv`: a regression I caused, plus a turn-taking fault
 
 This call ran on `agtvrsn_7901m2gfstdefjx9v816mvp2eyfr`, which **did** have every fix: the
