@@ -25,7 +25,7 @@
           "bearer": [
             {
               "key": "token",
-              "value": "292088a54e05f6ae323ef317839485540158c219d9dab867c8f65c169895fa91b732600adc94",
+              "value": "REDACTED_EVOLVO_API_KEY_see_n8n_credential_Evolvo_API_Key",
               "type": "string"
             }
           ]

@@ -1,0 +1,26 @@
+{
+  "endpoint": "update_schedule.php",
+  "method": "POST",
+  "url": "https://secure.mydroot.eu/evolvo/api/thirdpartyai/update_schedule.php",
+  "description": "Updates the state of an existing appointment (confirm / cancel / mark needs-reschedule). WRITE endpoint - has real-world effect on a real booking in Optofarm's live system.",
+  "auth": {
+    "type": "bearer",
+    "value": "{{token}} from get_auth.php"
+  },
+  "request_body": {
+    "scheduleid": "string - from get_schedule.php's scheduleid field",
+    "state": "number - 1=confirmed, 2=cancelled, 3=needs reschedule",
+    "obs": "string - optional observations"
+  },
+  "response_shape": "Not confirmed live.",
+  "verified_live": false,
+  "caveat": "Could NOT be tested live on 2026-08-31: after a real test booking was created via post_schedule.php (Dr. Baricz Anna, Tg. Mures Fortuna, 2026-09-01 09:00, patientName 'TEST TEST', phone 0700000000), no scheduleid for it could be obtained - it did not appear in get_schedule.php's listing nor via get_schedule_patient.php lookup by phone (several formats tried), even minutes after creation. See post_schedule.json notes: new bookings likely start in a pending/unconfirmed state not surfaced by the read endpoints, so there was no scheduleid available to call update_schedule.php with.",
+  "manual_cleanup_needed": "The test booking above (Dr. Baricz Anna / Fortuna / 2026-09-01 09:00 / 'TEST TEST' / 0700000000 / test@test.com) was NOT cancelled and needs to be removed manually via the droot/evolvo admin panel.",
+  "open_question_for_droot_solutions": "How does a third-party integration (e.g. a voice agent) retrieve the scheduleid of a booking it just created via post_schedule.php, given get_schedule.php/get_schedule_patient.php only appear to return confirmed ('Programat') bookings? Is there a delay before it becomes visible, a separate endpoint, or does staff confirmation happen first in the admin UI?",
+  "notes": [
+    "VERIFIED 2026-09-07: works on an Agenda/lead scheduleid from get_schedule.php (schedule_form=3). state=2 -> record state becomes 'Anulat'. Response {Result:OK}. Side effect: the slot stayed blocked in get_work_days.php after cancelling - ask Imreh whether staff must delete cancelled agenda entries to free the slot.",
+    "VERIFIED 2026-09-07 on a real Appointment scheduleid too (Paciens Teszt 2026-09-09 10:20 -> Anulat). In both tests the slot was NOT free immediately after cancelling, but the earlier cancelled lead's 10:00 slot WAS free again ~50 min later - release seems delayed or staff-driven.",
+    "2026-09-14: Optofarm report that hard delete is now possible via the API. NO evidence found: zero delete references across all 112 nodes of the live n8n workflow (versionId 9cc5083d, confirmed byte-identical to export), and the v4 Postman collection still lists this endpoint as scheduleid+state+obs, unchanged from v3 even though other endpoints gained fields in v4. Combined with note 8 in QUESTIONS_FOR_IMREH.md (state=0 -> errorcode 3 'unknown status', only 1/2/3 accepted), an undocumented state value is unlikely to be the mechanism. Asked as question 9. Probe harness ready at api-docs/probe-update-schedule.sh but CANNOT be run from the Claude Code container: its egress proxy denies secure.mydroot.eu and n8n.splitagency.biz.id, and its IP is not on evolvo's whitelist in any case - it must run from the n8n host (72.62.44.134) or the whitelisted dev machine."
+  ],
+  "verified_at": "2026-09-07"
+}

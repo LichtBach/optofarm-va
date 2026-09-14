@@ -1,0 +1,55 @@
+{
+  "endpoint": "get_work_days.php",
+  "method": "POST",
+  "url": "https://secure.mydroot.eu/evolvo/api/thirdpartyai/get_work_days.php",
+  "description": "Returns free appointment slots for a given calendar starting from a date. Use slotid from here as input to post_schedule.php.",
+  "auth": {
+    "type": "bearer",
+    "value": "{{token}} from get_auth.php"
+  },
+  "request_body": {
+    "calendarid": "string - from get_info.php's Calendars[].calendarid",
+    "date_from": "date (YYYY-MM-DD) - search start date, must be in the future"
+  },
+  "response": {
+    "status_200": {
+      "Result": "string - 'OK'",
+      "Records": [
+        {
+          "wday": "date (YYYY-MM-DD) - a day with available slots",
+          "free_timespace": [
+            {
+              "slot": "time (HH:MM)",
+              "slotid": "string - opaque encrypted id, required input to post_schedule.php"
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "example_response_live_2026-08-31": {
+    "Result": "OK",
+    "Records": [
+      {
+        "wday": "2026-09-04",
+        "free_timespace": [
+          { "slot": "09:50", "slotid": "<opaque encrypted string, ~230 chars, truncated>" },
+          { "slot": "10:50", "slotid": "<opaque encrypted string>" },
+          { "slot": "11:05", "slotid": "<opaque encrypted string>" },
+          { "slot": "11:20", "slotid": "<opaque encrypted string>" },
+          { "slot": "11:35", "slotid": "<opaque encrypted string>" }
+        ]
+      },
+      {
+        "wday": "2026-09-11",
+        "free_timespace": ["... more slots, same shape"]
+      }
+    ]
+  },
+  "notes": [
+    "Called with calendarid for 'Dr. Ardelean Adina', date_from=2026-09-01 -> returned free slots starting 2026-09-04, so results can skip forward several days past date_from to the next actually-free day.",
+    "slotid values are consumed once (booked), so they should be fetched fresh right before use, not cached long-term."
+  ],
+  "verified_live": true,
+  "verified_at": "2026-08-31"
+}

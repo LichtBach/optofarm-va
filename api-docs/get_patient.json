@@ -1,0 +1,34 @@
+{
+  "endpoint": "get_patient.php",
+  "method": "POST",
+  "url": "https://secure.mydroot.eu/evolvo/api/thirdpartyai/get_patient.php",
+  "description": "NEW in Postman v4 (2026-09-07). Looks up existing patient record(s) by phone number and returns their patientid, which post_schedule.php accepts to attach a booking directly to that patient instead of creating a lead/agenda insertion.",
+  "auth": {
+    "type": "bearer",
+    "value": "{{token}} from get_auth.php"
+  },
+  "request_body": {
+    "lng": "language: 0=en, 1=ro, 2=hu",
+    "phone": "string - patient phone number to search (Postman example: 0000000002)"
+  },
+  "response": {
+    "status_200_not_found": {
+      "Result": "NOTFOUND"
+    },
+    "status_200_not_found_note": "VERIFIED LIVE 2026-09-07 (via n8n, phone 0770000000 which only ever had leads). A phone that only has Agenda/lead bookings has NO patient record -> NOTFOUND. Leads do not create patients.",
+    "status_200_found": [
+      {
+        "name": "Paciens Teszt",
+        "phone": "123123123",
+        "patientid": "<opaque base64-like id, '=' padding replaced by ',' e.g. ends with ','>"
+      }
+    ],
+    "status_200_found_note": "VERIFIED LIVE 2026-09-07 with the CRM test patient 'Paciens Teszt' (#1867, phone 123123123). Array of {name, phone, patientid}. Only CRM patients are returned; phones that only have leads -> NOTFOUND."
+  },
+  "verified_live": true,
+  "notes": [
+    "Returns PII (patient identities by phone). Same handling rule as get_schedule.php: never store real responses in the repo.",
+    "Voice-agent use: after collecting phone + full name, call get_patient.php; if exactly one result matches the spoken name, pass its patientid to post_schedule.php (real appointment). If no match, book without patientid (lead). If several match and none/many fit the name, ask the caller to disambiguate rather than guessing - a wrong patientid silently books for the wrong person since name/phone are ignored."
+  ],
+  "verified_at": "2026-09-07"
+}
