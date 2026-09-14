@@ -4,6 +4,121 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-15 — first live smoke test: robotic repetition, and the last two copies of the "clinic will confirm" defect
+
+Two live calls were run against **Main** (a booking, then a cancellation). Three problems came out of
+them; all three are fixed below. n8n-side asks from the same calls are in
+[`../n8n/REQUESTS_FROM_ELEVENLABS.md`](../n8n/REQUESTS_FROM_ELEVENLABS.md).
+
+### 1. The agent sounded like a machine — `Un moment, vă rog.` before every single tool call
+
+Root cause was three things stacked, not one:
+
+1. **`pre_tool_speech: "force"` on all five tools.** `force` guarantees the agent speaks before every
+   webhook fires. It also costs a **full extra LLM + TTS round trip per tool call** — so it was
+   feeding the latency complaint at the same time.
+2. **The system prompt scripted the exact words** and closed them off: *"say once and only in the
+   caller's language: Romanian "Un moment, vă rog." … **— and nothing else**"*. That last clause
+   forbade the variation that would have made it sound human.
+3. **Each procedure step scripted the same sentence again**, so even a model inclined to vary had the
+   literal string in front of it three more times.
+
+Meanwhile `soft_timeout_config.timeout_seconds` was **`-1`** — the proper mechanism for this,
+a latency-*triggered* filler, was switched off entirely.
+
+**Fixed:**
+
+- All five tools: `force_pre_tool_speech: false`, `pre_tool_speech: "auto"`. The agent now speaks
+  before a webhook only when it judges it useful, instead of always.
+- **`soft_timeout_config` enabled**: `timeout_seconds: 3`, `use_llm_generated_message: true`,
+  `randomize_fillers: true`, `max_soft_timeouts_per_generation: 1`. This is the part worth
+  understanding — a language-aware filler prompt was **already sitting in the config, unused**
+  (`llm_generated_message_prompt_override`: *"Output ONLY a very short filler of one to three words,
+  in the language the caller has been speaking…"*). Static fillers could never solve this, because
+  `message` is one fixed string and the prompt forbids saying *Un moment* to a Hungarian caller.
+  The generated path is the only one that is language-aware, and it now fires **only when a turn is
+  actually slow**, rather than on every tool call.
+- **System prompt** (§ Language): the scripted line and its *"— and nothing else"* are replaced with
+  a vary-or-drop rule — silence before a lookup is explicitly allowed and preferred, and reusing a
+  holding phrase already used in the same call is forbidden.
+- **System prompt**, three further places: *"say a short holding line and call evolvo_…"* → *"call
+  evolvo_…"*. These mandated speech before `book_appointment`, `find_appointments` and
+  `log_request`; they no longer do.
+- **All three Main procedures**: every scripted `Un moment, vă rog.` replaced with a `HOLDING LINE:`
+  block that permits silence, requires variation, and offers two or three per-language options
+  instead of one fixed sentence.
+
+### 2. The "clinic will confirm it" defect had **three** copies, not one
+
+The 2026-09-14 entry below records fixing this in `cancel_or_reschedule`. The smoke test proved that
+was only a third of it — the agent said *"Clinica vă va confirma programarea"* on a **booking**.
+Two more copies were live:
+
+- **Main's `booking` procedure**, `evolvo_book_appointment` step — *"say the request is registered for
+  that day and time and the clinic will confirm it."*
+- **The system prompt**, § Appointment flow — the same sentence again.
+
+Both now say a colleague will call back about it, and both explicitly forbid claiming that the
+clinic, the practice or anyone else will confirm the appointment. `evolvo_book_appointment`'s tool
+description was updated to match in the same pass, so the tool and both procedure copies now agree.
+
+Also in `booking`: *"the full name exactly as registered at the clinic"* → *"…as it is registered
+with us"*, removing the last spoken-facing use of the banned word in that step.
+
+### 3. Latency
+
+`pre_tool_speech: force` was removing roughly **1.5–3 s per tool call** in pure overhead — that is
+the single largest ElevenLabs-side win available and it is now taken. What remains is the webhook
+round trip (tools measured 1.5–2.5 s), which is n8n's side: the `FIND`/`MAN` paths scan
+`get_schedule.php` in 5 × 7-day windows, **6 evolvo calls per lookup**, and do it twice in a cancel
+call. That ask is written up in
+[`../n8n/REQUESTS_FROM_ELEVENLABS.md`](../n8n/REQUESTS_FROM_ELEVENLABS.md) § 2.
+
+### 4. "It went to ANULAT but wasn't deleted" — this is correct behaviour, not a bug
+
+There is still **no hard delete** in the API (see the 2026-09-14 entry and
+[`../api-docs/QUESTIONS_FOR_IMREH.md`](../api-docs/QUESTIONS_FOR_IMREH.md) Q9). `ANULAT` **is** the
+cancellation. What matters operationally is not whether the row disappears but whether the **slot is
+released** — and the n8n side measured that at ~8 s. Removing the row entirely is a staff action in
+the evolvo admin panel. Confirmation of the release for the smoke-test record is asked for in
+`REQUESTS_FROM_ELEVENLABS.md` § 1(c), along with a request for a `slot_released` flag in the
+response so the agent stops *inferring* it.
+
+### Versions
+
+Procedures committed on Main (all three, `has_draft: false` afterwards):
+
+| procedure | id | new version |
+| --- | --- | --- |
+| `booking` | `agtprc_7801m0axd3y3ej590n280yw80rr0` | `agtprcv_0301m2g75y71f5vb0z9zkp9frepf` |
+| `cancel_or_reschedule` | `agtprc_4901m0axdt4zev9tmgtcxy60x9da` | `agtprcv_7501m2g75y78ez09wavaz0sjhqjv` |
+| `escalate_to_human` | `agtprc_4401m0axbt3rfcfvpj4grmp73wph` | `agtprcv_6101m2g75y6tfe5bkn0khjztnbyh` |
+
+### Gotcha worth recording
+
+`agents_update` **does** commit pending procedure drafts — but the `workflow` block it echoes back in
+its response is the **pre-update** snapshot. Reading that response will tell you the drafts did not
+commit. Verify with `agents_list_procedures` (`has_draft: false` plus a changed `version_id`) or
+`agents_compile_procedures` (which then answers `no_draft_to_compile`), never with the update's own
+echo.
+
+Separately: `agents_update` with a partial `body` is a **deep merge**. Patching
+`conversation_config.turn.soft_timeout_config` alone left `prompt.tools`, `tool_ids` and everything
+else untouched — verified after each write. That is the safe way to change one setting without
+restating the whole config, which is what caused the `prompt.tools` incident in the README.
+
+### Still open
+
+- `latency-step-merge` has not been merged. It still holds the 26.5 %-reduced `booking` procedure and
+  the Romanian `notificare` wording, and it does **not** have any of today's changes. Per-item
+  newest-wins means Main's newer `booking` would now win over the branch's optimised one, so the
+  optimisation needs re-porting rather than merging. Merge with `archive_source_branch: false`.
+- Ordering leak, seen in the transcript: the agent called `check_availability` before the purpose of
+  the visit was known, then backfilled the question after the slot was accepted. The `booking`
+  procedure already forbids this (*"never check availability before the branch or doctor AND the
+  purpose are known"*), so this is a compliance problem, not a missing rule. Worth watching on the
+  next smoke test before adding more prompt text.
+
 ## 2026-09-14 — reschedule auto-cancel, and the correct cancellation story
 
 Picks up the handover in [`../README.md`](../README.md) after the n8n side verified that cancelling
