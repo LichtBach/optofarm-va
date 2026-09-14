@@ -158,6 +158,17 @@ What the change needs:
 In Evolvo, providers with "dr." in the name are doctors; providers without it are optometrists.
 Some cases should be booked with an optometrist (glasses and similar), not a doctor.
 
+> **Answered by the n8n side, 2026-09-14** — see
+> [`../n8n/qa-followups-answers.md`](../n8n/qa-followups-answers.md). Both checks below are done:
+> the prefix heuristic is **verified against live data** (30 calendars: 21 `Dr. …`, 9
+> `Optometrist …`, 0 unmatched — and note every non-doctor is *explicitly* prefixed `Optometrist`,
+> nothing is identified by absence), and **`evolvo_check_availability` already filters** — send
+> `provider_type: "doctor" | "optometrist"` and the agent does **not** filter the list itself. A
+> branch with no such provider returns `no_provider_of_type`; an unrecognised value is ignored
+> rather than rejected; `provider_type_filter` is echoed only when the filter actually ran, so a
+> missing echo is not a failure. Only Zsófi's visit-reason → provider-type mapping is still
+> outstanding.
+
 **Partly blocked:** Zsófi is sending a list of which cases go to an optometrist and which to a
 doctor. The routing rules cannot be written before that list arrives. What can be done now:
 
@@ -182,6 +193,16 @@ Leave a clearly marked placeholder section in the prompt rather than guessing th
 
 Client's example: "until what time is Baric Anna there today?" → "Dr. Baric Anna's schedule ends at
 nine."
+
+> **Answered by the n8n side, 2026-09-14 — this is NOT an ElevenLabs change.** The raw responses
+> were checked against live data: `get_work_days.php` returns only `{wday, free_timespace[{slot,
+> slotid}]}` and `get_info.php` carries no hours either, so **a shift end is not derivable from the
+> API at all**. The suspicion below is exactly right, and slot data must not be used to approximate
+> it. Scoped and handed to dRoot Solutions as question 10 in
+> [`../api-docs/QUESTIONS_FOR_IMREH.md`](../api-docs/QUESTIONS_FOR_IMREH.md); if they expose working
+> hours, surfacing them through `check_availability` is a small n8n change. Until then the honest
+> answer is that the agent sees free appointment times, not working hours. Details:
+> [`../n8n/qa-followups-answers.md`](../n8n/qa-followups-answers.md).
 
 **Check feasibility first — this may not be an ElevenLabs change at all.** `evolvo_check_availability`
 returns *free slots*, which is not the same as a shift end. If a provider's last free slot is 15:00

@@ -119,3 +119,56 @@ So, concretely:
 If what was meant is simply that **staff** can delete a record in the evolvo admin panel, please say
 so plainly — that is what we have been asking for under "manual cleanup" all along, and it would mean
 there is nothing for us to build.
+
+---
+
+## Status update 2026-09-14 — question 9's premise is resolved
+
+We re-tested slot release end to end through our own integration and can close the part of question 9
+that mattered most: **cancelling (`state 2`) frees the slot in about 8 seconds**, not ~50 minutes. We
+measured it on both a lead and a real patient-linked appointment, and re-booked the freed slot
+successfully straight afterwards. The earlier "~50 minutes" observation was wrong and we are
+retiring it.
+
+That removes the practical reason for wanting a hard delete. We would still like a yes/no on whether
+one exists (question 9), but it is no longer blocking anything.
+
+One correction to our own earlier reporting, for your records: we previously said leads do not block
+a slot until staff confirm them. They do — a lead blocks its slot immediately, exactly like a
+confirmed appointment.
+
+## 10. Can the API expose a provider's working hours (shift start/end)?
+
+Callers ask things like *"until what time is Dr. Baricz Anna there today?"*, and we cannot answer it
+without inventing something, which we will not do.
+
+`get_work_days.php` returns only free slots (`wday` + `free_timespace[{slot, slotid}]`) and
+`get_info.php` returns no hours either, so a provider's **shift end is not derivable**: if the last
+free slot is 15:00 the provider may still be working until 21:00, with the rest already booked.
+
+Could you expose, per calendar and per day:
+
+- the working interval (start and end), and ideally
+- any break within it, so we do not offer a time inside one.
+
+Either as extra fields on `get_work_days.php`'s records, as a block on `get_info.php`, or as a
+separate endpoint — whichever fits your model. We only need to read it.
+
+## 11. The `ai_*` fields on `get_info.php` — can the clinic fill them in?
+
+Each calendar comes back with eight fields that look built for exactly this integration, and every
+one of them is empty on all 30 calendars:
+
+`ai_doctor_title`, `ai_description`, `ai_default_language`, `ai_supported_languages`,
+`ai_emergency_contacts`, `ai_public_names_hu`, `ai_public_names_ro`, `ai_public_names_en`
+
+- Are these editable by the institution in the evolvo admin panel, and if so where?
+- What is the expected shape of each — free text, a code list, an array?
+- Is `ai_doctor_title` the intended place for a provider's **type** (doctor vs optometrist)? We
+  currently infer that from the `Dr. …` / `Optometrist …` name prefix, which works on all 30
+  calendars today but would break silently if a calendar were ever named differently.
+- Are `ai_public_names_*` meant to be the **spoken** form of a provider's name per language? Speech
+  recognition mangles staff names badly, and a per-language spoken form would help us directly.
+
+If they are meant for a different product and we should ignore them, that is a perfectly good answer
+too — we would just like to know before we build anything that duplicates them.
