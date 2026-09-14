@@ -4,6 +4,91 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-15 (night) — every holding-phrase path closed, and the tool constraints moved into the schema
+
+Two live calls on the new version (`conv_6601m2ge39a8fpjb31k9h4kez8c5` booking,
+`conv_2501m2gedptwfz1b2egtbe5q0hqf` cancel). Plenty now works — the purpose is asked **before** the
+lookup, `provider_type` goes out, the lead wording is right, the reminder sentence is right, the
+cancel is clean. Two things were still wrong, and both were mine.
+
+### 1. The 3-second soft timeout fired on ordinary turns
+
+Enabling `soft_timeout_config` at **3 s** this morning was a mistake. A normal turn reaches first
+audio in about 2–3.5 s, so the "filler" fired on turns where **no tool ran at all** — which is why
+the agent said *"Verific acum."* and then simply asked a question, and prefixed a knowledge-base
+answer with *"Un moment."* Timings from the record make it unambiguous: filler at 21 s, the actual
+question at 27 s, no tool call between them.
+
+`timeout_seconds` is back to **-1**. It was -1 before today and that was correct; the repetition was
+never the soft timeout's fault, it was `pre_tool_speech: force` plus the scripted lines.
+
+### 2. `pre_tool_speech: auto` is not conservative enough
+
+`auto` is meant to decide from recent tool latency. Tools now answer in **0.9–2.5 s** and it still
+spoke before nearly every call. Set to **`off` on all five tools**. The agent now says nothing before
+a webhook; a 1–2 s pause on a phone call is normal and reads as thinking, not as a fault. If a
+lookup ever feels too silent, put `auto` back on `evolvo_check_availability` alone.
+
+Together these close every path that could produce a holding phrase: no forced pre-tool speech, no
+soft-timeout filler, no scripted lines in the prompt or procedures.
+
+### 3. Prose failed, so the constraints are in the schema now
+
+This is the important one. The call ran on `agtvrsn_7101m2gdwxjgeg1bk2k5v9wgy609` — the version
+carrying, added barely an hour earlier, *"CALL IT ONCE"*, *"never call it to discover which branches
+exist"* and *"NEVER send Târgu Mureș as a city"*. The agent called `check_availability` **three
+times**:
+
+| # | Params | Latency |
+|---|---|---|
+| 1 | `{"provider_type":"doctor"}` — **no target at all** | 1.25 s |
+| 2 | `{"provider_type":"doctor","city":"Targu Mures"}` | 0.93 s |
+| 3 | `{"provider_type":"doctor","location":"Doja"}` | 2.07 s |
+
+Calls 1 and 2 are exactly what the new wording forbids. This is the README's design note landing on
+us again: **the engine ignores prose roughly one run in three, whatever the wording.** So the rules
+moved into the JSON schema, where the model cannot violate them:
+
+- **`city` is now `enum: ["Reghin","Sovata"]`.** Târgu Mureș is structurally unsendable. Call 2
+  becomes impossible rather than discouraged.
+- **`required_constraints.any_of`** requires at least one of `location`, `doctor` or `city`. A call
+  carrying only `provider_type` is now schema-invalid. Call 1 becomes impossible.
+- **`location` is now an enum of the eight branch keywords**, which also kills invented branches.
+- `provider_type`'s description states plainly that it *narrows* a search and never *targets* one.
+
+A schema constraint is worth more than a paragraph of prose here, and it costs nothing at runtime.
+
+### 4. Latency: correcting this morning's correction
+
+I reported 3.8–5.1 s earlier today from old-version calls. On the current version the same tool
+answered in **1.25 s, 0.93 s, 2.07 s** (booking 2.06 s, find 1.18 s, manage 2.20 s). The honest
+statement is that `check_availability` varies **0.9–5.1 s** depending on how wide the search is — a
+narrow branch lookup is ~2 s, and the 5.12 s case was a `provider_type` scan across a whole branch.
+The n8n ask stands, but it is a tail-latency question, not a "the tool is always slow" one. Updated
+in [`../n8n/REQUESTS_FROM_ELEVENLABS.md`](../n8n/REQUESTS_FROM_ELEVENLABS.md).
+
+### On "it went to ANULAT and was not deleted" — the data says it worked
+
+Raised again after the cancel call. What `evolvo_manage_appointment` actually returned:
+
+```json
+"success": true, "slot_released": true, "slot_release_status": "released",
+"note": "Cancelled, and the 2026-09-15 12:20 slot is free again - it can be booked straight away."
+```
+
+So the slot **was** freed, in about 2 s, and is immediately re-bookable. There is still no hard
+delete in the API (Q9 unanswered), `ANULAT` **is** how a cancellation is recorded, and removing the
+row is a staff action in the evolvo admin panel. Nothing is broken here. Added to the tool
+description: never tell a caller an appointment was *deleted* or *removed*, only that it was
+*cancelled* — so the agent's words match what the system actually does.
+
+### Still not right
+
+The agent read out **six** branches (*"Poștei, Fortuna, Trandafirilor, Doja, Bulevard sau
+Republicii"*) where the procedure says offer three. It had them because call 2 returned them. With
+that call now impossible it must use the prompt's three — worth checking on the next test rather
+than adding more wording.
+
 ## 2026-09-15 (evening) — the repeated filler was not fixed this morning, and the tool is slower than we thought
 
 A pasted transcript showed `Un moment, vă rog.` three times and `check_availability` running several

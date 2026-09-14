@@ -59,8 +59,12 @@ Actual `tool_latency_secs` from the conversation records:
 | Reghin, optometrist | `{"provider_type":"optometrist","location":"Reghin"}` | **5.12 s** |
 | Republicii | `{"location":"Republicii"}` | **3.79 s** |
 
-For comparison `book_appointment` was **2.91 s** in the same call. So `check_availability` is roughly
-**twice** the cost of booking, and it is the single biggest contributor to the silence a caller hears.
+For comparison `book_appointment` was **2.91 s** in the same call.
+
+**Correction, same day:** on the current version the same tool answered in **1.25 s**, **0.93 s** and
+**2.07 s** in one call. So it is not uniformly slow — a narrow branch lookup is ~2 s. The 5.12 s case
+was a `provider_type` scan across a whole branch, and that is the tail we are asking about. Treat
+this as a tail-latency question, not "the tool is always slow".
 Your 7 → 3 work was on the **cancel** path; as far as we can tell `check_availability` has not been
 looked at.
 
