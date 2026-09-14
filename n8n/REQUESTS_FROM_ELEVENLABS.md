@@ -44,6 +44,40 @@ halves stay in step.
 
 ---
 
+## 2026-09-15 (late) — one concrete check on the cancelled slot
+
+The client is looking at the evolvo staff calendar and sees the cancelled record still sitting in its
+row, stamped `Anulat`. We have explained that this is what a cancellation looks like and that there
+is no delete — but there is one thing we cannot check from our side and would rather not assert.
+
+**The record:** Pacient Test, **2026-09-15 12:20–12:40**, Dr. Zait Natalia, Doja
+(`ref` `2AYK`, cancelled at roughly 17:3x UTC today). Your response said:
+
+```json
+"slot_released": true, "slot_release_status": "released",
+"note": "Cancelled, and the 2026-09-15 12:20 slot is free again - it can be booked straight away."
+```
+
+**Please confirm from a live `get_work_days.php`** that Dr. Zait / Doja now actually offers
+**2026-09-15 12:20**. Two reasons this is worth one check rather than taking the flag at face value:
+
+- `slot_released` is new, and this is the first time it has been read in anger by a real caller flow.
+  If it is derived from anything other than the slot reappearing in the free list, we would like to
+  know before we let the agent tell callers a time is bookable on the strength of it.
+- The staff UI still renders the cancelled card in that row. If evolvo also treats the row as
+  occupied for *booking* purposes while the API reports it free, then `slot_released: true` would be
+  true-but-useless, and the agent would confidently offer a slot staff cannot honour. That is the
+  failure mode worth ruling out.
+
+If it does come back free, nothing more is needed and we will stop raising it.
+
+**Also worth a line from you, since we keep being asked:** is there anything at all on the evolvo
+side — a flag, a setting, a cron — that removes or hides cancelled rows from the staff calendar? If
+not, that is a question for Imreh alongside Q9 and the answer for the client is simply "staff delete
+it in the admin panel". We would like to stop guessing at it.
+
+---
+
 ## 2026-09-15 (evening) — `check_availability` is the slow one, and we'd like a guard on it
 
 Two asks, both from real call data (`conv_8701m2fvjnjre698mhm84r3bw77c`,

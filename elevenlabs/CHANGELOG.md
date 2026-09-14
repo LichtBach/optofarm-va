@@ -4,6 +4,49 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-15 (late) — holding lines banned outright; what the calendar screenshot actually shows
+
+### The prompt still *permitted* the phrases
+
+`pre_tool_speech` is off on all five tools and the soft timeout is back to -1, but the prompt's
+Language section still said *"If you do say something, keep it to a few words… vary it, or drop it."*
+That is permission, and the model took it — which is how *"Verific acum."* survived. It also did not
+cover acknowledgements at all, so *"Bine."* was never forbidden.
+
+Replaced with a flat ban, naming the offenders:
+
+> *"NEVER say a holding line, a filler, or an acknowledgement before you answer or before you look
+> something up. No "Un moment", no "Verific acum", no "Verific disponibilitatea", no "Egy pillanat",
+> no "Megnézem", no "Bine", no "Rendben", no "Perfect", no "Înțeleg", no "Desigur" — not before a
+> lookup, not before a question, not before a fact, not before anything… Go straight to the question
+> or straight to the answer, every time."*
+
+All four paths that could produce one are now shut: forced pre-tool speech (off), soft-timeout filler
+(-1), scripted lines in the procedures (removed), and prompt permission (revoked).
+
+### The calendar screenshot: both readings are true
+
+The client sent the evolvo staff calendar showing the Pacient Test 12:20–12:40 card still visible,
+and said the appointment "is still there". It is — and it is **stamped `Anulat`** in the red side
+tab. That is precisely what a cancellation looks like in evolvo; there is no delete.
+
+So two separate things were being conflated, and both are true at once:
+
+| Question | Answer |
+|---|---|
+| Is the record gone from the calendar? | **No.** It shows as `Anulat`. There is no API delete (Q9 unanswered); removing the row is a staff action — the admin panel's own trash icon is visible in that same screenshot. |
+| Is the **slot** free again? | **Yes**, per the tool: `slot_released: true`, `slot_release_status: "released"`, and a note naming the 12:20 slot as bookable. |
+
+The one thing worth verifying rather than asserting is whether the *visible card* stops staff booking
+over it in the UI — that is a different question from whether the API offers the slot, and it is not
+answerable from here. Asked in
+[`../n8n/REQUESTS_FROM_ELEVENLABS.md`](../n8n/REQUESTS_FROM_ELEVENLABS.md) as a concrete check on
+that exact date, time and calendar.
+
+Meanwhile the agent's wording is now aligned with what actually happens: the prompt and
+`evolvo_manage_appointment` both say a cancelled appointment is *recorded as cancelled* and stays in
+Optofarm's records, and the agent must say **cancelled** — never *deleted* or *removed*.
+
 ## 2026-09-15 (night) — every holding-phrase path closed, and the tool constraints moved into the schema
 
 Two live calls on the new version (`conv_6601m2ge39a8fpjb31k9h4kez8c5` booking,
