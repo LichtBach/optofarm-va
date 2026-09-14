@@ -130,10 +130,16 @@ appointment). See [`n8n/CHANGELOG.md`](n8n/CHANGELOG.md) and
 1. **Nothing currently mocks `book_appointment`.** Only one test survived the account move, so the
    reschedule wording is not exercised by any test, and a test without mocks hits live n8n and writes
    real evolvo records. Add mocks (including `replaced_appointment`) before running any suite.
-2. **`latency-step-merge` has drifted** — it carries the reduced `booking` procedure but not the
-   reschedule changes. Promoting it as-is would regress reschedule handling.
+2. **`latency-step-merge` is superseded — do not merge it.** Its optimised `booking` procedure and
+   its prompt content (reminder wording, the never-call-it-a-clinic guardrail, the eight-branch
+   landmarks) were ported onto Main on 2026-09-15 and re-merged with the fixes made that day. The
+   branch's own copies are now the stale ones: its prompt still scripts `Un moment, vă rog.`
+   Re-branch from Main if a branch is needed again.
 3. **Zsófi's visit-reason → provider-type list** is the only thing still blocking QA item 4. The n8n
    plumbing is finished and waiting (see below).
+4. **The ordering leak is fixed in wording but unproven in a call.** The ported `booking` procedure
+   turns "never check availability before the purpose is known" from a rule into a stop condition.
+   Watch it on the next smoke test rather than assuming it holds.
 
 ### Open — n8n side, answered 2026-09-14
 
