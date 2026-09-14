@@ -4,6 +4,96 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-15 (later) — booking optimisation ported onto Main, and cancel stops guessing
+
+Two things landed together, because the first depends on prompt sections the second brought with it.
+
+### 1. The booking optimisation is now on Main — but it was not a copy
+
+`latency-step-merge` held the 26.5 %-reduced `booking` procedure. A straight merge would have been
+wrong twice over: per-item newest-wins would have let Main's newer `booking` beat the optimised one,
+and the optimised procedure **delegates to prompt sections Main did not have**. It says *"add the
+reminder sentence exactly as your system prompt gives it for this language, and follow that section"* —
+and Main had no such section. Porting the procedure alone would have pointed the agent at nothing.
+
+So the port took the branch's prompt as the base and re-applied today's work on top. What Main gained:
+
+- **`## What the caller is told they will receive`** — the section the procedure depends on, with
+  *"Vă trimitem o notificare înainte de programare."* / *"Az időpont előtt küldünk egy emlékeztetőt."*
+  and the rule that a reminder is the only thing ever sent.
+- **A guardrail that kills the whole defect class**: *"Optica Optofarm is an optician's, not a clinic
+  and not a hospital. Never call it a clinic in any language."* Plus *"Never promise the caller a
+  confirmation of any kind that reaches them."* The `Clinica vă va confirma` bug was a symptom; this
+  is the cause, removed. The Personality line now says *a network of opticians and optical stores…
+  where eye examinations are also carried out*, so the prompt no longer contradicts its own guardrail.
+- **Confirmed landmarks for all eight branches**, replacing the single Republicii landmark, with the
+  proper-noun list (Kaufland, Flanco, BRD, BCR, Orange, Petrom, Penny, Elixon, Kimikálé, Poli 2,
+  Bernády, Avram Iancu, Casa de Modă) that must not be translated.
+- **The negotiation fix**: *"a caller proposing an alternative has not given up."*
+
+Re-applied on top, so nothing from earlier today regressed: the vary-or-drop holding-line rule, the
+three removed *"say a short holding line and call…"* mandates, and the explicit
+*"never say that the clinic, the practice or anyone else will confirm it"* clause on the exact line
+that shipped the defect.
+
+**The optimised procedure also fixes the ordering leak** flagged this morning. Main's old wording
+(*"never check availability before the branch or doctor AND the purpose are known"*) was a rule the
+agent walked past. The ported version turns it into a stop condition: *"DO NOT LEAVE THIS STEP until
+BOTH … are known. Being told only the branch is NOT enough to move on."* Worth watching on the next
+smoke test rather than assuming it is fixed.
+
+Measured on the compiled workflow: **31 nodes / 34 edges → 27 / 30**, and 134,935 → 120,299 chars,
+**−10.8 % across all three procedures** (the booking procedure itself is −26.5 %).
+
+### 2. Cancel now reads `slot_released` instead of asserting it
+
+n8n shipped this (their reply in [`../n8n/REQUESTS_FROM_ELEVENLABS.md`](../n8n/REQUESTS_FROM_ELEVENLABS.md)
+§1(b)). It matters more than it looks. The agent was telling callers the cancelled time was bookable
+again on the strength of a **~8 s measurement**, not on anything in the response. n8n's own
+investigation showed why that was fragile: for the smoke-test record the slot could not be verified
+at all, because **that calendar alternates morning and afternoon shifts and 14:00 was not in that
+day's window**. Absence from the free list does not mean blocked — it can mean the provider is not
+working then. Hence `unknown` being a separate status from `still_blocked`.
+
+Changed in three places so they agree:
+
+- **`evolvo_manage_appointment` description** — *"its slot becomes bookable again within seconds"* is
+  gone. It now reads `slot_released` / `slot_release_status` / `note`, and says the time is free only
+  when `slot_released` is true. The `action` enum description was carrying the same assertion and was
+  fixed too.
+- **`cancel_or_reschedule`**, cancel step — same contract, with *"WHETHER THE TIME IS FREE AGAIN IS
+  NOT YOURS TO ASSUME"* and an explicit ban on stating it from memory.
+- **System prompt**, § Cancelling or changing an appointment — one line so the rule holds outside the
+  procedure too.
+
+Also dropped the `HOLDING LINE:` block from `cancel_or_reschedule` — the system prompt now carries
+the vary-or-drop rule, so repeating it per-step is cost without benefit. The ported `booking` never
+had one. `escalate_to_human` still does; harmless, and it can go next time that file is touched.
+
+### Versions
+
+| procedure | new version |
+| --- | --- |
+| `booking` | `agtprcv_6301m2g9hk29enxv4bb6ty78h6q6` |
+| `cancel_or_reschedule` | `agtprcv_0401m2g9hk2mf1t8gn8eahd7qwx8` |
+| `escalate_to_human` | `agtprcv_6101m2g75y6tfe5bkn0khjztnbyh` (unchanged) |
+
+### Status of `latency-step-merge`
+
+**Do not merge it.** Everything it carried that was worth having is now on Main, re-merged with
+today's fixes rather than overwriting them. Its own copies are now the stale ones — its prompt still
+has the scripted `Un moment, vă rog.` and the `— and nothing else` clause. Re-branch from Main if a
+branch is needed again.
+
+### From the n8n side, for the record
+
+Their reply also confirmed: `Anulat` **is** the cancellation and that reading should stand (Q9 still
+unanswered by Imreh, nothing blocked on it); the cancel path went **7 evolvo calls → 3** via a
+`conversation_id` cache and a narrowed window; parallel fetching was deliberately **not** done on
+rate-limit grounds; and `pre_tool_speech: auto` is safe — nothing on their side keys off the holding
+line. Their one timing caveat, worth knowing if a read-back ever double-prompts: a **5-second replay
+guard** on `phone_confirmed` / `appointment_confirmed`, which a real read-back never comes near.
+
 ## 2026-09-15 — first live smoke test: robotic repetition, and the last two copies of the "clinic will confirm" defect
 
 Two live calls were run against **Main** (a booking, then a cancellation). Three problems came out of

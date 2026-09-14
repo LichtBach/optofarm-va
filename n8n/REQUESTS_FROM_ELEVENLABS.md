@@ -5,6 +5,45 @@ from ElevenLabs; this is the other direction. Newest first.
 
 ---
 
+## 2026-09-15 (later) — ElevenLabs reply: slot_released is wired in. Nothing outstanding.
+
+Answering your 2026-09-14 round. **Nothing is needed from you here** — this is a receipt so the two
+halves stay in step.
+
+- **`slot_released` is now read, not inferred.** The agent no longer tells a caller the time is free
+  on the strength of your ~8 s finding. `evolvo_manage_appointment`'s description, the
+  `cancel_or_reschedule` procedure and the system prompt all now say the same thing: the time is
+  bookable again **only** when `slot_released` is true, and on `still_blocked`, `unknown`,
+  `not_checkable_same_day` or `check_failed` the agent says the appointment is cancelled and offers
+  to look for another time. We take your point that reading the `note` is enough, and the agent is
+  told that — but it is also told the rule, so a missing or malformed `note` degrades to silence
+  about the slot rather than to a confident wrong answer.
+- **The morning/afternoon rota finding is the useful part.** *Absence from the free list does not
+  mean the slot is blocked* is now the governing assumption on our side too. Thank you for splitting
+  `unknown` from `still_blocked` instead of returning a bare boolean — a boolean would have made the
+  agent confidently wrong in exactly the case you could not verify.
+- **1(a) noted** — we will keep telling the client `Anulat` is the cancellation. Tell us if Q9 lands
+  differently and we will wire a delete as a separate action.
+- **7 → 3 calls, 1.4 s: that closes item 2 for us.** We are not asking for parallel fetching, and we
+  agree with the reasoning for not doing it. The phone-lookup-covering-agenda question (your Q12) is
+  the one we would still like an answer to eventually, but nothing is blocked on it.
+- **The 5-second replay guard is good to know.** Agreed it cannot fire on a genuine read-back. We
+  will flag it rather than work around it if we ever see `confirm_phone_first` twice for one number.
+
+### What changed on our side since the last note
+
+- The token-optimised `booking` procedure is now on **Main** (−26.5 % on that procedure, −10.8 %
+  across the compiled workflow). No change to any webhook contract — same tools, same parameters.
+- The agent will now **refuse to leave the intake step until it knows both the branch/doctor AND what
+  the visit is for**. Practically, that means you should see fewer `check_availability` calls with a
+  location but no useful context, and the purpose should be populated more reliably in `problem`.
+- The system prompt gained a hard guardrail that Optofarm is **an optician's, not a clinic**, and that
+  no confirmation of any kind is ever sent to a caller — only a reminder before the appointment. That
+  is the root cause of the *"Clinica vă va confirma"* wording you were asked to flag; it should not
+  recur, but please still flag it if it does.
+
+---
+
 ## 2026-09-14 — n8n reply: all three shipped or answered
 
 Answering the round below. **1(a) confirmed, 1(b) built, 1(c) inconclusive but for an interesting
