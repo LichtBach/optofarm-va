@@ -1,0 +1,61 @@
+{
+  "endpoint": "get_info.php",
+  "method": "POST",
+  "url": "https://secure.mydroot.eu/evolvo/api/thirdpartyai/get_info.php",
+  "description": "Returns the institution's calendars (one entry per doctor + workstation/location combination). Use calendarid from here as input to get_work_days.php.",
+  "auth": {
+    "type": "bearer",
+    "value": "{{token}} from get_auth.php"
+  },
+  "request_body": {
+    "lng": "language for text fields: 0=en, 1=ro, 2=hu"
+  },
+  "response": {
+    "status_200": {
+      "Result": "string - 'OK'",
+      "Calendars": [
+        {
+          "name": "string - display name of the calendar (usually same as doctor_name)",
+          "doctor_name": "string",
+          "workstation": "string - clinic location/address",
+          "interventiontypes": "array - intervention type options, maps to post_schedule.php's interventionType index",
+          "problem_description": "string - newline-separated list of problem/reason options for this calendar",
+          "calendarid": "string - opaque encrypted id, required input to get_work_days.php",
+          "slot_duration": "number - minutes per appointment slot",
+          "ai_doctor_title": "string",
+          "ai_description": "string",
+          "ai_default_language": "string",
+          "ai_emergency_contacts": "array",
+          "ai_supported_languages": "array",
+          "ai_public_names_hu": "string",
+          "ai_public_names_ro": "string",
+          "ai_public_names_en": "string"
+        }
+      ]
+    }
+  },
+  "example_response_live_2026-08-31": {
+    "Result": "OK",
+    "calendars_count": 30,
+    "sample_entry": {
+      "name": "Dr. Baricz Anna",
+      "doctor_name": "Dr. Baricz Anna",
+      "workstation": "Tg. Mures, Fortuna",
+      "interventiontypes": [],
+      "problem_description": "Prescriere ochelari\nPrescriere lentile de contact\nTensiune oculara\nFund de ochi",
+      "calendarid": "<opaque encrypted string, ~750-900 chars, truncated here>",
+      "slot_duration": 15,
+      "ai_doctor_title": "",
+      "ai_description": "",
+      "ai_default_language": "",
+      "ai_emergency_contacts": [],
+      "ai_supported_languages": [],
+      "ai_public_names_hu": "",
+      "ai_public_names_ro": "",
+      "ai_public_names_en": ""
+    },
+    "note": "Optofarm is an optometry/ophthalmology clinic network across Tg. Mures, Reghin, Sovata; 30 calendar entries = distinct doctor+location pairs. Full list saved separately, not in this doc file, since calendarid values are long opaque tokens best fetched live rather than hardcoded."
+  },
+  "verified_live": true,
+  "verified_at": "2026-08-31"
+}

@@ -1,0 +1,101 @@
+# Questions for Imreh R. (dRoot Solutions) — thirdpartyai API
+
+Context: integrating this API with an ElevenLabs voice agent via n8n. We built a real n8n workflow (using a Webhook trigger, exactly how the production integration will call the API) at `https://n8n.splitagency.biz.id`, workflow "Droot Evolvo - IP Diag Test", and ran it against the live API URL you gave us: `https://secure.mydroot.eu/evolvo/api/thirdpartyai/`. Below is the real webhook response and the raw HTTP exchanges behind it. Two issues need clarifying before we build the booking flow for real.
+
+## Live n8n webhook run — full result
+
+Triggered via `GET https://n8n.splitagency.biz.id/webhook/droot-diag-test`, which runs: get_auth → get_info → get_work_days → post_schedule (attempt A, fresh slot) → post_schedule (attempt B, same slot again) → get_schedule → get_schedule_patient, and returns this summary:
+
+```json
+{
+  "step1_auth": { "status": 200, "got_token": true },
+  "step2_calendar_used": { "name": "Dr. Baricz Anna", "workstation": "Tg. Mures, Fortuna" },
+  "step3_slot_used": { "wday": "2026-09-08", "slot": "09:00" },
+  "step4_post_schedule_bad_problemDescription": { "status": 200, "body": { "Result": "OK" } },
+  "step5_post_schedule_valid_problemDescription": { "status": 200, "body": { "Result": "ERROR", "errorcode": 1 } },
+  "step6_get_schedule_lookup": { "status": 200, "total_records_in_window": 55, "found_our_test_booking": false },
+  "step7_get_schedule_patient_lookup": { "status": 200, "body": { "Result": "NOTFOUND" } },
+  "conclusion": "Booking created (Result:OK) but NOT retrievable via get_schedule.php or get_schedule_patient.php"
+}
+```
+
+Booking made in step4: patient "TEST TEST N8N", phone `0700000009`, email `test@test.com`, Dr. Baricz Anna / Fortuna, 2026-09-08 09:00. **Please delete this manually** — same as the earlier one below, we have no scheduleid to cancel it via the API.
+
+## 0. RESOLVED on our side (2026-09-02) — but a heads-up: empty patientEmail → 401
+
+We hit repeated `401`s on `post_schedule.php` (empty body, no `API_ERROR_CUSTOM` header) while reads worked fine with the same token. **Root cause turned out to be an empty `patientEmail` field** — sending a non-empty email makes the booking succeed (`Result: OK`) immediately. We now default the email on our side, so this no longer blocks us.
+
+**Minor question (not urgent):** is `patientEmail` intended to be required? The `401` (which looks like an auth failure and has no `API_ERROR_CUSTOM` header) is misleading for what is really a missing/empty required field — an `errorcode` in a `200` body (like other validation errors) would be clearer. Not blocking us; just flagging in case it's an easy fix or affects other integrators.
+
+## 1. `errorcode: 1` — what does it actually mean?
+
+Earlier (separate, manual test) we got `errorcode:1` and assumed it meant `problemDescription` must match one of the calendar's predefined options from `get_info.php`. **That assumption turned out to be wrong** — see the n8n run above: step4 used a completely made-up free-text `problemDescription` on a fresh slot and it succeeded fine (`Result:OK`). Step5 then reused the *same slotid* (already booked by step4) with the calendar's exact predefined description text, and got `errorcode:1` — most likely just because the slot was already taken, not because of the description.
+
+**Question:** what does `errorcode:1` (and other errorcodes) on `post_schedule.php` actually mean? Is there a list of possible error codes and their causes (e.g. slot already taken, invalid patientPhone format, missing required field, etc.)? We don't want to guess and build incorrect validation into the voice agent.
+
+## 2. How do we retrieve/manage a booking right after creating it?
+
+Confirmed twice now (once manually, once via the real n8n webhook above): `post_schedule.php` returns `{"Result":"OK"}` with **no scheduleid or any identifier**. The resulting booking does not show up afterward in:
+- `get_schedule.php` for the relevant date window (55 real records returned in the n8n run, ours wasn't among them)
+- `get_schedule_patient.php` by phone (tried several formats: with/without leading 0, with +40 prefix — always `NOTFOUND`)
+
+This was true minutes after booking, in both tests. Every appointment we *do* see via `get_schedule.php` has `"state": "Programat"` (confirmed) — we've never seen any other state.
+
+**Question:** does a booking made via `post_schedule.php` need staff confirmation in the admin UI before it becomes visible via `get_schedule.php` / `get_schedule_patient.php`? If so, is there any way to get the `scheduleid` of a booking immediately after creating it, so a voice agent could confirm/reschedule/cancel its own booking via `update_schedule.php` without waiting on staff?
+
+## Manual cleanup needed (2 leftover TEST bookings)
+
+We couldn't cancel either via the API (no scheduleid available) — please remove them:
+- Dr. Baricz Anna, Tg. Mureș - Fortuna, **2026-09-01 09:00**, patient "TEST TEST", phone `0700000000`, email `test@test.com`
+- Dr. Baricz Anna, Tg. Mureș - Fortuna, **2026-09-08 09:00**, patient "TEST TEST N8N", phone `0700000009`, email `test@test.com`
+
+## 3. Sensitivity to request rate / 403 IP blocks
+
+Separately, during earlier manual testing (not the n8n run above), after ~6-7 requests within about a minute (including one malformed request on our side), our whitelisted IP got a plain Apache `403 Forbidden` on every endpoint, including `get_auth.php` itself — not the API's own JSON error format, a generic Apache "you don't have permission" page. It did **not** clear after 5 minutes of polling every 20s.
+
+**Question:** is there a rate limit / fail2ban-style block on this server? What's a safe request rate for an automated integration (voice agent + n8n), and what's the actual cooldown duration after a burst or a 401?
+
+```
+09:01:43 UTC  first 403 Forbidden (plain Apache page, on get_info.php)
+09:01:43 UTC  → 403 (retry, on get_auth.php itself)
+09:02:29 - 09:07:10 UTC  polled get_auth.php every ~20s, 15 attempts, every single one still 403
+```
+
+---
+
+## Other raw exchanges (from the earlier manual test, for reference)
+
+**get_auth.php → 200**
+```
+POST https://secure.mydroot.eu/evolvo/api/thirdpartyai/get_auth.php
+Authorization: Bearer <institution API key>
+→ 200 {"token":"<session token>"}
+```
+
+**get_schedule_patient.php, several phone formats tried → all not found**
+```
+POST .../get_schedule_patient.php
+lng=1, phone=0700000000  (also tried 700000000, +40700000000)
+→ 200 {"Result":"NOTFOUND"}
+```
+
+Full endpoint documentation (schema + examples for all 7 endpoints) is in `api-docs/*.json` alongside this file.
+
+---
+
+## Status update 2026-09-07 — Postman v4 received
+
+Imreh's v4 collection adds `schedule_form` (none/0=All, 1=Appointment, 3=Agenda) on `get_schedule.php` and `get_schedule_patient.php`, a new `get_patient.php` (phone → `patientid`), and an optional `patientid` on `post_schedule.php` (ties the booking to an existing patient; name/email/phone are then ignored). This most likely answers **question 2**: the invisible bookings were agenda insertions, which the read endpoints only return with `schedule_form=0` or `3`. Still to confirm live (from n8n's IP): whether agenda records carry a `scheduleid` usable by `update_schedule.php`, the full `get_patient.php` response shape, and what `schedule_form=2` would be. Questions 1 (errorcode meanings) and 3 (403 blocks — this dev machine got a plain Apache 403 again on 2026-09-07 on its first request) remain open.
+
+## v4 live results (2026-09-07) and new questions
+
+Tested through our n8n workflow (IP 72.62.44.134): `get_schedule.php` with `schedule_form=3` returns our test lead (`form: "Agenda"`, `state: "Programat"`, with a `scheduleid`), and `update_schedule.php state=2` on that id works (state → `Anulat`). Thank you — that closes the old question 2.
+
+4. **`get_schedule_patient.php` does not return Agenda records by phone**, even with `schedule_form=0` or `3` (phone `0770000000`, which had a fresh lead, → `NOTFOUND`). Is that intended? We now scan `get_schedule.php` in 7-day windows and filter by phone ourselves — 6 calls per lookup instead of 1. A phone lookup that also covers agenda entries would be much better for us.
+5. **Slot release after cancel is delayed.** Right after `update_schedule.php state=2` (tested on an Agenda entry and on a real Appointment) `get_work_days.php` still did not offer the slot; the first one reappeared roughly 50 minutes later. Is there a cache / cron, or did someone delete it manually? We need to know what to tell a caller who cancels and wants to rebook the same slot.
+6. **`get_patient.php` for a phone that only has leads → `NOTFOUND`**, so the `patientid` flow only helps returning CRM patients — confirmed and fine. (patientid booking verified with test patient 'Paciens Teszt' #1867 — works as described, thanks.)
+7. Our dev machine IP `188.27.55.208` now gets a plain Apache `403` on the very first `get_auth.php` call — was it removed from the whitelist?
+
+Test records left in the system (both cancelled via API, state **Anulat**): TEST TEST N8N / 0770000000 / Dr. Baricz Anna, Gheorghe Doja / 2026-09-09 10:00 (agenda), and Paciens Teszt / 123123123 / same doctor+location / 2026-09-09 10:20 (appointment). Paciens Teszt's own 2026-09-10 09:05 appointment was not touched.
+
+8. **Can a cancelled record be set back to Programat?** `update_schedule.php` with `state=0` returns `{"Result":"ERROR","errorcode":3,"message":"unknown status"}`; only 1/2/3 are accepted. During our tests the voice agent cancelled Paciens Teszt's 2026-09-10 09:05 appointment by mistake and we could not undo it — could you (or the clinic) restore it, and is there an API way to undo a cancellation? Related: the cancelled record still blocks the slot, and slots are on the calendar's 20-minute grid, so 09:05 cannot be re-booked through `post_schedule.php` either.

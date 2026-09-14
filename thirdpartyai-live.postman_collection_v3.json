@@ -1,0 +1,409 @@
+{
+  "info": {
+    "_postman_id": "",
+    "name": "thirdpartyai-live",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": ""
+  },
+  "item": [
+    {
+      "name": "get_auth.php",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();\r\npm.collectionVariables.set(\"token\", data.token);\r\npm.collectionVariables.unset(\"calendarid\");\r\npm.collectionVariables.unset(\"slotid\");\r\npm.collectionVariables.unset(\"scheduleid\");\r\n"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "292088a54e05f6ae323ef317839485540158c219d9dab867c8f65c169895fa91b732600adc94",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{LINK}}/api/thirdpartyai/get_auth.php",
+          "host": [
+            "{{LINK}}"
+          ],
+          "path": [
+            "api",
+            "thirdpartyai",
+            "get_auth.php"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "get_info.php",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();\r\npm.collectionVariables.set(\"calendarid\", data.Calendars[0].calendarid);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "lng",
+              "value": "1",
+              "type": "text",
+              "description": "language: 0-en, 1-ro, 2-hu"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{LINK}}/api/thirdpartyai/get_info.php",
+          "host": [
+            "{{LINK}}"
+          ],
+          "path": [
+            "api",
+            "thirdpartyai",
+            "get_info.php"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "get_work_days.php",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();\r\npm.collectionVariables.set(\"slotid\", data.Records[0].free_timespace[0].slotid);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "calendarid",
+              "value": "{{calendarid}}",
+              "type": "text",
+              "description": "calendarid from get_info call"
+            },
+            {
+              "key": "date_from",
+              "value": "2026-08-26",
+              "type": "text",
+              "description": "search start date must be in the future"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{LINK}}/api/thirdpartyai/get_work_days.php",
+          "host": [
+            "{{LINK}}"
+          ],
+          "path": [
+            "api",
+            "thirdpartyai",
+            "get_work_days.php"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "get_schedule",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const data = pm.response.json();\r\npm.collectionVariables.set(\"scheduleid\", data[0].scheduleid);"
+            ]
+          }
+        }
+      ],
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "lng",
+              "value": "1",
+              "type": "text",
+              "description": "language: 0-en, 1-ro, 2-hu"
+            },
+            {
+              "key": "atdate",
+              "value": "2026-08-26",
+              "type": "text",
+              "description": "starting date for request - future dates only (max: today+31days)"
+            },
+            {
+              "key": "interval",
+              "value": "1",
+              "type": "text",
+              "description": "if set 0-7 days, default 7 days"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{LINK}}/api/thirdpartyai/get_schedule.php",
+          "host": [
+            "{{LINK}}"
+          ],
+          "path": [
+            "api",
+            "thirdpartyai",
+            "get_schedule.php"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "get_schedule_patient.php",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "lng",
+              "value": "1",
+              "type": "text",
+              "description": "language: 0-en, 1-ro, 2-hu"
+            },
+            {
+              "key": "phone",
+              "value": "0000000001",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{LINK}}/api/thirdpartyai/get_schedule_patient.php",
+          "host": [
+            "{{LINK}}"
+          ],
+          "path": [
+            "api",
+            "thirdpartyai",
+            "get_schedule_patient.php"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "post_schedule.php",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "lng",
+              "value": "1",
+              "type": "text",
+              "description": "language: 0-en, 1-ro, 2-hu"
+            },
+            {
+              "key": "slotid",
+              "value": "{{slotid}}",
+              "type": "text",
+              "description": "free slotid from get_work_days"
+            },
+            {
+              "key": "patientName",
+              "value": "Test Patient",
+              "type": "text",
+              "description": "patient name"
+            },
+            {
+              "key": "patientEmail",
+              "value": "test@droot.ro",
+              "type": "text",
+              "description": "patient email"
+            },
+            {
+              "key": "patientPhone",
+              "value": "0741568974",
+              "type": "text",
+              "description": "patient telephone"
+            },
+            {
+              "key": "interventionType",
+              "value": "0",
+              "type": "text"
+            },
+            {
+              "key": "problemDescription",
+              "value": "What is your problem",
+              "type": "text",
+              "description": "description"
+            },
+            {
+              "key": "observations",
+              "value": "",
+              "type": "text",
+              "description": "observations"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{LINK}}/api/thirdpartyai/post_schedule.php",
+          "host": [
+            "{{LINK}}"
+          ],
+          "path": [
+            "api",
+            "thirdpartyai",
+            "post_schedule.php"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "update_schedule",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "scheduleid",
+              "value": "{{scheduleid}}",
+              "type": "text",
+              "description": "scheduleid from get_schedule"
+            },
+            {
+              "key": "state",
+              "value": "1",
+              "type": "text",
+              "description": "1-confirmed, 2-cancelled, 3-needs reschedule"
+            },
+            {
+              "key": "obs",
+              "value": "",
+              "type": "text",
+              "description": "observations"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{LINK}}/api/thirdpartyai/update_schedule.php",
+          "host": [
+            "{{LINK}}"
+          ],
+          "path": [
+            "api",
+            "thirdpartyai",
+            "update_schedule.php"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "LINK",
+      "value": ""
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ]
+}
