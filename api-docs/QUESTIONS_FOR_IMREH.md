@@ -172,3 +172,19 @@ one of them is empty on all 30 calendars:
 
 If they are meant for a different product and we should ignore them, that is a perfectly good answer
 too — we would just like to know before we build anything that duplicates them.
+
+## 12. Can a phone lookup return agenda entries too?
+
+`get_schedule_patient.php` still does not return `Agenda` (lead) records when we look a patient up by
+phone, even with `schedule_form=0` — it only returns real appointments. Because the voice agent must
+be able to find and cancel a booking it made itself, and its own bookings start as agenda entries, we
+work around it by scanning `get_schedule.php` in five 7-day windows and filtering by phone on our
+side: **six calls where one should do**, on every lookup, on a live phone call where latency is
+audible to the caller.
+
+Is a phone lookup that covers agenda entries on the roadmap? Either `get_schedule_patient.php`
+including them, or any endpoint that takes a phone number and returns both kinds, would remove the
+scan entirely and take roughly a second out of every cancellation call.
+
+If the omission is deliberate, knowing why would help us too — we would stop treating it as a gap.
+

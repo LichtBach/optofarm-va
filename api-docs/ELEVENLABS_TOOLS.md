@@ -84,6 +84,23 @@ Identifies the appointment by the `ref` from find_appointments plus the caller's
 | `note` | optional | goes into `obs` |
 | `conversation_id` | string, auto | gate key |
 
+**On a successful `cancel` the response carries `slot_released` (2026-09-14).** evolvo is re-queried
+after the cancel and the answer reports what was actually found, instead of the agent inferring that
+the time is bookable again:
+
+| `slot_release_status` | `slot_released` | Meaning |
+|---|---|---|
+| `released` | `true` | the exact time is free again and can be booked immediately |
+| `still_blocked` | `false` | it has not reappeared — do not offer that time |
+| `unknown` | `false` | the whole day is absent from the calendar (fully booked, or not a working day) |
+| `not_checkable_same_day` | `false` | the appointment was today; evolvo needs a future date to re-check |
+| `check_failed` | `false` | the re-check itself failed |
+
+The `note` is already phrased for the caller in every case, so reading it is sufficient. `confirm`
+and `reschedule` do not free a slot and so do not carry these fields. Note that **absence from the
+free list does not prove a slot is blocked** — a provider may simply not work then, which is why
+`unknown` exists as a separate value.
+
 Error answers that mean **nothing was changed**: `confirm_appointment_first` (with `appointment` + `read_back` to say out loud), `ambiguous_appointment` (several on the given date — includes the list), `ref_date_mismatch` (ref and date point at different records), `appointment_not_found`, `not_found`, `not_supported_yet`.
 
 After `reschedule`, the agent runs check_availability + book_appointment for the new slot, reusing the `person` name from the confirmed appointment rather than asking the caller for one.
@@ -91,6 +108,19 @@ After `reschedule`, the agent runs check_availability + book_appointment for the
 **Slot release on reschedule (2026-09-14).** evolvo state 3 (`Trebuie reprogramat`) does **not** release the old slot — only state 2 (cancel) does. So `reschedule` marks the record *and remembers it*; the old record is cancelled automatically by `book_appointment` once the replacement booking succeeds, in the same conversation. The booking response then carries `replaced_appointment {ref, person, date, time, doctor, location, cancelled}` and the `note` says the earlier appointment was cancelled and its slot released. **The agent must not call manage_appointment again to cancel the old one** — it is already gone.
 
 The hand-off is keyed on `conversation_id` (both tools already send `system__conversation_id`) and additionally requires the booking phone to match the marked appointment's phone — so booking for a *different* number later in the same call never cancels the first person's appointment. If the call ends before a replacement is booked, the record simply stays at `needs_reschedule` holding its slot, which is the safe failure: staff see it and call back. Order matters: **mark first, then book.** Booking before marking leaves the old slot blocked.
+
+### Lookup cost and the shared scan (2026-09-14)
+
+`find_appointments` costs 6 evolvo calls (one patient lookup + five 7-day `get_schedule` windows),
+because `get_schedule_patient.php` still does not return Agenda/lead records by phone. Within one
+conversation that scan is now **shared**: `find_appointments` parks its records against
+`conversation_id` + phone for 180 s and `manage_appointment` reuses them, skipping the scan entirely.
+`manage_appointment` also narrows to the single 7-day window containing `date` when it has to scan
+itself. A cancel that follows a lookup in the same call now costs 3 evolvo calls instead of 7.
+
+This is invisible from the agent's side — same requests, same answers, just faster — but it is the
+reason `conversation_id` matters on both tools. Without it every call misses the cache and falls back
+to the full scan, which still works, only slower.
 
 ### Phone-only identification (2026-09-09)
 The old identity check was phone **+ full name**, with fuzzy name matching in n8n. It failed in practice: a caller saying "Csergo Zsofia" came through as "Cerches Zofia", which no fuzzy match can rescue. Names are now out of the identification path entirely:

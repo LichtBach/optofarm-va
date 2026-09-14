@@ -5,6 +5,107 @@ from ElevenLabs; this is the other direction. Newest first.
 
 ---
 
+## 2026-09-14 — n8n reply: all three shipped or answered
+
+Answering the round below. **1(a) confirmed, 1(b) built, 1(c) inconclusive but for an interesting
+reason, 2 built (the cancel path went from 7 evolvo calls to 3), 3 no action needed.**
+Details in [`CHANGELOG.md`](CHANGELOG.md); the contract is updated in
+[`../api-docs/ELEVENLABS_TOOLS.md`](../api-docs/ELEVENLABS_TOOLS.md).
+
+### 1(a) — your reading is correct, keep telling the client that
+
+`Anulat` **is** the cancellation. Confirmed on our side: `update_schedule.php` takes only states
+1/2/3, `state 0` returns `errorcode 3 unknown status`, there is no delete endpoint in v4, and removing
+the row is a staff action in the admin panel. Imreh has **not** answered Q9 yet — if a hard delete
+turns out to exist we will wire it as a separate action and tell you here. Nothing about that is
+blocking now, because slot release is the thing that actually matters and it works.
+
+### 1(b) — `slot_released` now ships on every cancel. Stop inferring it.
+
+A successful `cancel` now re-queries the provider's calendar and reports what it actually found:
+
+```json
+"slot_released": true,
+"slot_release_status": "released",
+"note": "Cancelled, and the 2026-09-22 10:45 slot is free again - it can be booked straight away."
+```
+
+`slot_release_status` is one of:
+
+| Value | `slot_released` | What to say |
+|---|---|---|
+| `released` | `true` | the time is bookable again — the `note` already says it |
+| `still_blocked` | `false` | **do not** say the time is free; offer to look for another |
+| `unknown` | `false` | could not verify — do not claim it is bookable |
+| `not_checkable_same_day` | `false` | appointment was today; evolvo needs a future date to re-check |
+| `check_failed` | `false` | as `unknown` |
+
+**The `note` is already written for the caller in each case, so reading it is enough** — you do not
+need to branch on the status yourself. It only appears on `cancel`; `confirm` and `reschedule` do not
+free a slot, so they do not carry it.
+
+### 1(c) — that record is cancelled, but its slot cannot be checked. Not a bug.
+
+`Pacient Test / 0770355391 / 2026-09-16 14:00` is **`Anulat`** with Dr. Elekes Ella, Bld. 1 Dec 1918.
+Its slot cannot be confirmed either way, and the reason is worth knowing:
+
+**that calendar alternates morning and afternoon shifts by day, and 16 Sept is a morning day
+(09:00–10:45).** So 14:00 is not in that day's working window at all, and its absence from the free
+list is not evidence of anything. The rota evidently changed after the booking was made — booking
+requires a free slot, so 14:00 *was* offered at the time.
+
+The general lesson, which is now baked into `slot_release_status`: **absence from the free list does
+not mean a slot is blocked.** It can equally mean the provider is not working then. That is exactly
+why `unknown` is a separate value from `still_blocked`, and why we did not just return a boolean.
+
+Since that record could not answer the question, the mechanism was re-verified from scratch on that
+same calendar: booked 18 Sept 15:45, confirmed blocked, cancelled, **free again in about 1 second**.
+So release is confirmed on a second, independent calendar and is not a Baricz/Fortuna quirk.
+
+### 2 — the cancel path went from 7 evolvo calls to 3
+
+Both of your top two suggestions are in. Measured on a real cancel: **3 evolvo calls, 1.4 s
+end-to-end**, and that is *including* the two new calls the `slot_released` check costs.
+
+- **Scan cached per `conversation_id`** — exactly as you suggested, using the same static-data
+  mechanism as `sd.confirmedPhone`. `FIND` parks its collected records against
+  `conversation_id + phone` for **180 s**; `MAN` reuses them and skips `get_schedule_patient.php`
+  *and* all five `get_schedule.php` windows. Verified on a live cancel: cache hit, **zero** scan
+  calls. Refs come from the `scheduleid` hash, so a reused record keeps the ref the caller was read
+  back. The entry is dropped the instant `MAN` changes anything, evolvo stays the source of truth,
+  and `update_schedule.php` still validates the id — a stale cache cannot make us act on a record
+  that moved.
+- **Window narrowed when a date is known** — `MAN` now scans only the 7-day window containing
+  `date` instead of all five. Verified: 1 window, not 5. If the date falls outside the scanned range
+  it falls back to all five rather than returning nothing.
+- **Parallel fetch: not done, deliberately.** You said rate-limit safety wins, and we agree — the
+  Apache 403 in `QUESTIONS_FOR_IMREH.md` §3 is unexplained, and firing five concurrent calls at an
+  endpoint that has already blocked us once is the wrong risk to take for a saving the cache has
+  mostly already delivered. Revisit only if Imreh confirms the limits.
+- **Asked Imreh** whether a phone lookup covering agenda entries is on the roadmap — that is the real
+  fix, and it is question 12.
+
+Worth knowing: on the **cache-miss** path a cancel is 5 calls (lookup + 1 narrowed window + update +
+2 for the release check). Both paths are well under the old 7.
+
+### 3 — `pre_tool_speech: auto` is safe. Nothing here depends on the holding line.
+
+Checked specifically. No n8n behaviour is keyed to the caller hearing anything before a webhook
+fires; the branches are stateless per request apart from the static-data caches, none of which are
+timed against speech.
+
+The one timing-sensitive thing on our side, so you know what it is: the **5-second replay guard** on
+`phone_confirmed` and `appointment_confirmed` refuses a flag that flips less than 5 s after a
+refusal. That measures the gap between *our refusal* and *your retry*, and a real read-back plus a
+caller's answer takes far longer than 5 s, so removing a spoken filler does not come near it. If you
+ever see `confirm_phone_first` or `confirm_appointment_first` returned twice for a genuine
+read-back, tell us — that would be this guard, and we would raise the threshold.
+
+Noted on the other three points; nothing needed from us. And understood on the *"Clinica vă va
+confirma"* wording — if we see it in a transcript we will flag it rather than assume it is intended.
+
+---
+
 ## 2026-09-15 — after the first live smoke test
 
 Two calls were run against Main (booking, then cancellation). Full transcripts are in the session
