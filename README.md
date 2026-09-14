@@ -35,6 +35,7 @@ n8n/                          the n8n half
   README.md                     instance, branches, credentials, how to edit safely
   CHANGELOG.md                  dated record of every change
   slot-release-and-reschedule.md   2026-09-14 investigation and fix
+  qa-followups-answers.md       answers to the ElevenLabs side's open questions
   provider-type-runbook.md      doctor vs optometrist routing
   Optofarm-WIP.workflow.json    redacted export of the live workflow
   smoke-test.sh                 read-only checks + guard paths
@@ -106,35 +107,51 @@ current value. Never send `conversation_config.agent.prompt.tools`: doing so onc
 survive the account move. Nothing currently mocks `book_appointment`. No tests are attached to Main
 — deliberately, since attached tests once blocked publishing entirely.
 
-## Handover: what the n8n side needs from the ElevenLabs side
+## Handover between the two halves
 
-Nothing is broken without these — the mechanism works today, because both tools already send
-`system__conversation_id`. These are wording changes that stop the agent from mis-describing what
-actually happened.
+### Done — the 2026-09-14 reschedule round is closed on both sides
 
-1. **`evolvo_book_appointment` — teach it about `replaced_appointment`.** After a reschedule, the
-   booking response now carries `replaced_appointment` and the old appointment is *already*
-   cancelled. Without a line about it, the agent may call `evolvo_manage_appointment` to cancel the
-   old one, receive `appointment_not_found`, and — following its own description — tell the caller a
-   colleague will call back. A completed reschedule then sounds like a failure.
-   Add: if `replaced_appointment.cancelled` is true, say the appointment was moved and do **not**
-   cancel the old one; if false, the new time is booked but a colleague must remove the old one.
+The n8n side made `book_appointment` cancel a marked appointment once a replacement is booked, and
+the ElevenLabs side taught the tools and the `cancel_or_reschedule` procedure to describe that
+correctly (`replaced_appointment`, the load-bearing mark → book order, `needs_reschedule` as a live
+appointment). See [`n8n/CHANGELOG.md`](n8n/CHANGELOG.md) and
+[`elevenlabs/CHANGELOG.md`](elevenlabs/CHANGELOG.md) for each half.
 
-2. **`evolvo_manage_appointment` — make the order explicit.** It already says to run availability +
-   booking after a reschedule. Add that booking the new time cancels this appointment automatically
-   and frees its slot, so the tool must never be called again to cancel it. The order **mark → book**
-   is now load-bearing: booking first leaves the old slot blocked.
+### Open — ElevenLabs side
 
-3. **Check the cancel/reschedule procedure** still marks before it books.
+1. **Nothing currently mocks `book_appointment`.** Only one test survived the account move, so the
+   reschedule wording is not exercised by any test, and a test without mocks hits live n8n and writes
+   real evolvo records. Add mocks (including `replaced_appointment`) before running any suite.
+2. **`latency-step-merge` has drifted** — it carries the reduced `booking` procedure but not the
+   reschedule changes. Promoting it as-is would regress reschedule handling.
+3. **Zsófi's visit-reason → provider-type list** is the only thing still blocking QA item 4. The n8n
+   plumbing is finished and waiting (see below).
 
-4. **Tests that mock `book_appointment`** should include `replaced_appointment` in the mocked
-   response, or the reschedule wording is never exercised.
+### Open — n8n side, answered 2026-09-14
 
-A design note, since it has caught everyone: the deterministic procedure engine skips "ask the
-caller" steps in roughly one run in three, whatever the wording. That is why the phone read-back,
-the slot offer and the appointment confirmation are all enforced **server-side in n8n** and answered
-with an error that tells the agent what to say next. Prefer a new guard in n8n over a new sentence in
-the prompt — the prompt route has failed repeatedly where the guard worked first time.
+Both open questions from [`elevenlabs/qa-followups.md`](elevenlabs/qa-followups.md) have been
+checked against live data. Full answers: [`n8n/qa-followups-answers.md`](n8n/qa-followups-answers.md).
+
+- **QA item 4 (optometrist vs doctor) — already built.** The `Dr. …` / `Optometrist …` prefix is
+  verified across all 30 calendars with nothing unmatched, and `evolvo_check_availability` has
+  filtered by `provider_type` since 2026-09-11 — **the agent must not filter the list itself**.
+- **QA item 5 (read back a provider's schedule) — not possible.** Neither `get_work_days.php` nor
+  `get_info.php` exposes working hours, so a shift end cannot be derived and must not be guessed
+  from free slots. Handed to dRoot Solutions as question 10 in
+  [`api-docs/QUESTIONS_FOR_IMREH.md`](api-docs/QUESTIONS_FOR_IMREH.md).
+- **Worth a look from both halves:** every calendar carries eight `ai_*` fields
+  (`ai_doctor_title`, `ai_description`, `ai_public_names_ro/hu/en`, …) and **all are empty**. If the
+  clinic can fill them, they would replace the provider-type heuristic, hold the visit-reason
+  routing as clinic-maintained data, and give per-language spoken forms of provider names — which is
+  the standing ASR problem. Question 11 for dRoot Solutions.
+
+### A design note, since it has caught everyone
+
+The deterministic procedure engine skips "ask the caller" steps in roughly one run in three, whatever
+the wording. That is why the phone read-back, the slot offer and the appointment confirmation are all
+enforced **server-side in n8n** and answered with an error that tells the agent what to say next.
+Prefer a new guard in n8n over a new sentence in the prompt — the prompt route has failed repeatedly
+where the guard worked first time.
 
 ## ⚠️ Credentials: this repository is public
 

@@ -3,6 +3,28 @@
 Newest first. Every entry is a change to the live workflow **Optofarm - WIP**
 (`jLUnlrt9zM8VWZvp`) on `https://n8n.splitagency.biz.id`.
 
+## 2026-09-14 (later) — answered the QA follow-ups; no workflow change
+
+Took up items 4 and 5 of [`../elevenlabs/qa-followups.md`](../elevenlabs/qa-followups.md), which
+asked the n8n side to verify something before the prompt work could proceed. Full answers:
+[`qa-followups-answers.md`](qa-followups-answers.md). Nothing in the workflow changed.
+
+- **Item 4 (optometrist vs doctor) — already built, heuristic confirmed.** Live `get_info.php` now
+  returns **30** calendars (it was 16 on 2026-09-11): 21 `Dr. …`, 9 `Optometrist …`, **0 unmatched**.
+  Every non-doctor is explicitly prefixed `Optometrist` — the rule is not "absence of dr.".
+  `check_availability`'s `provider_type` filter re-tested against the expanded set and correct,
+  including the new Fortuna doctors. Fortuna remains the doctor-only branch for exercising
+  `no_provider_of_type`.
+- **Item 5 (read back a provider's schedule) — impossible with the current API.** Verified against
+  raw live responses that `get_work_days.php` returns only free slots and `get_info.php` no hours,
+  so a shift end cannot be derived. Handed to dRoot Solutions as question 10.
+- **Found: eight `ai_*` fields on every calendar, all empty** (`ai_doctor_title`, `ai_description`,
+  `ai_public_names_hu/ro/en`, `ai_supported_languages`, `ai_emergency_contacts`,
+  `ai_default_language`). If the clinic can fill them they would replace the name-prefix heuristic,
+  hold the visit-reason routing, and give per-language spoken forms of provider names. Question 11.
+- Recorded in `QUESTIONS_FOR_IMREH.md` that question 9's premise is dead: cancel frees the slot in
+  ~8 s, not ~50 min, so the hard-delete request is no longer blocking.
+
 ## 2026-09-14 — cancel/reschedule slot release
 
 Imreh reported that cancelling frees the reserved slot; confirmed, and two defects found and fixed.
