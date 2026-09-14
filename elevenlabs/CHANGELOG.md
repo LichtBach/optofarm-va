@@ -4,6 +4,84 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-15 (evening) — the repeated filler was not fixed this morning, and the tool is slower than we thought
+
+A pasted transcript showed `Un moment, vă rog.` three times and `check_availability` running several
+times in one booking. First thing established, because it changes what the transcript means:
+
+**That call predates every change made today.** The newest conversation on record starts at unix
+`1789386309`; the first config change today landed at `1789398285`, about 3¼ hours later. A listing
+filtered to `call_start_after_unix=1789390000` returns **zero** conversations. Every recorded call —
+including the pasted one — ran on `agtvrsn_7301m239c0jtfm5bnwrydrv11mff` or older. So the transcript
+shows the *old* agent, and neither the de-scripting nor the ported procedure was live for it.
+
+That is not a reason to dismiss it. Two real problems came out of reading the actual records.
+
+### 1. A bug in this morning's own fix: the generated filler hardcoded the phrase
+
+Enabling `use_llm_generated_message` was supposed to replace the scripted holding line with a varied,
+language-aware one. But `llm_generated_message_prompt_override` — which was left untouched — read:
+
+> *"Output ONLY a very short filler of one to three words… Romanian: **Un moment**… Hungarian: Egy
+> pillanat… English: One moment… No other words."*
+
+The agent runs at **`temperature: 0`**. Given that prompt it would have produced *"Un moment"* every
+single time. The change moved the hardcoded phrase from the prompt into the filler generator rather
+than removing it, and a smoke test would have shown the same robotic repetition with no obvious
+cause. Rewritten to name several options per language and to require one **not already used in this
+call**; the static `message` fallback changed from `Un moment, vă rog.` to `O clipă.` so even the
+fallback path does not reproduce the reported phrase.
+
+Also confirmed from the records what the repetition actually was: the tool calls carry
+`"system__message_to_speak":"Egy pillanat, kérem."` as a parameter — that is `pre_tool_speech: force`
+injecting the line, which is what this morning's change to `auto` removes.
+
+### 2. `check_availability` is 3.8–5.1 s, not 1.5–2.5 s
+
+Measured `tool_latency_secs` from the records: **5.12 s** (Reghin + optometrist) and **3.79 s**
+(Republicii). `book_appointment` in the same call was **2.91 s**. So the earlier "tools 1.5–2.5 s"
+figure was wrong, and `check_availability` — the tool called most often — is roughly twice the cost
+of booking. The n8n side's 7→3 optimisation was on the **cancel** path; this one appears untouched.
+Asked in [`../n8n/REQUESTS_FROM_ELEVENLABS.md`](../n8n/REQUESTS_FROM_ELEVENLABS.md).
+
+### What changed here
+
+The client's point — *gather everything first, then call once* — is right, and the ported procedure
+only half-covered it. It had a stop condition on the purpose but nothing stopping a **discovery
+call**: in the transcript the agent called the tool with a bare city, got `too_many_matches`, and
+read the branch list off the result. It spent 4–5 s of the caller's time to learn something already
+written in its own prompt. (Tell: it offered *"Poștei, Fortuna sau Trandafirilor"* — Fortuna comes
+from the tool; the prompt says Poștei, Trandafirilor, Doja.)
+
+`booking` (`agtprcv_9301m2gdwxjjftmsmra5xh3nt135`) now says:
+
+- **`CALL IT ONCE.`** Every call costs the caller 3–5 s of silence; a second call is only for
+  something the caller *changes*, never for collecting what should have been asked first.
+- **The tool is only for finding free TIMES.** Never call it to discover which branches exist, where
+  they are, their hours, or who works there — all of that is prompt and knowledge-base content and
+  must be answered instantly, without a tool.
+- **Never send `Târgu Mureș` as a city** (six branches → `too_many_matches`). `city` is only for
+  Reghin and Sovata, which have one branch each. The intake step now states that naming only Târgu
+  Mureș is *not a usable place*, so the stop condition covers it.
+- The intake step is headed **"GATHER EVERYTHING HERE, BEFORE ANY TOOL RUNS"** and says plainly that
+  nothing in it calls a tool.
+- The name/phone step is told not to ask anything about the appointment itself — that is where the
+  *"Pentru ce doriți programarea? Vă rog să-mi spuneți numele"* double-question came from.
+- **`time_not_available` at booking** (which is how the pasted call ended) now has explicit handling:
+  say the time has just gone, offer one alternative, rebook immediately — **do not** re-ask for the
+  name and number, which are already in hand. The book step also says to call straight after the
+  read-back, since every added turn is time for the slot to be taken.
+
+### The honest caveat
+
+Wording alone has already failed at this once: the ordering rule existed before and the agent walked
+past it. The README's own design note says the procedure engine skips ask-steps in roughly one run in
+three *whatever the wording*, and that server-side guards have worked where prompt edits repeatedly
+did not. So two guards have been requested from n8n — reject a lookup with a bare `Targu Mures`
+city, and reject one carrying **neither** `doctor` nor `provider_type`, since under Zsófi's rule one
+of the two is always known by the time a lookup is legitimate. Until those exist, treat this fix as
+likely-but-not-proven.
+
 ## 2026-09-15 (later still) — Zsófi's visit-reason rule wired in; `provider_type` was never actually sent
 
 Zsófi's answer arrived:
@@ -20,11 +98,17 @@ an eye disease, an OCT scan, eye pressure measurement, a screening, anything urg
 are not sure about"*). Zsófi's list **confirms** it rather than changing it — including her default,
 *"vagy egyebet mond a páciens → orvos"*, which matches "anything you are not sure about → doctor".
 
-**The real defect was that nothing ever sent the parameter.** The booking procedure's availability
-step listed `doctor`, `location`, `city` and `date_from` and stopped there. `provider_type` was
-documented on the tool, implemented in n8n since 2026-09-11, verified across 30 calendars — and never
-populated by the agent. Every lookup has been running unfiltered. That is why this looked "blocked on
-Zsófi" when the ElevenLabs half was also incomplete.
+**The real defect was that nothing reliably sent the parameter.** The booking procedure's
+availability step listed `doctor`, `location`, `city` and `date_from` and stopped there, so
+`provider_type` went only when the LLM chose to from the tool description alone — sometimes it did,
+sometimes it did not. That is why this looked "blocked on Zsófi" when the ElevenLabs half was also
+incomplete.
+
+*(Corrected 2026-09-15 evening: this entry first said the parameter was **never** sent. The
+conversation records disprove that — `conv_8701m2fvjnjre698mhm84r3bw77c` shows
+`{"provider_type":"optometrist","location":"Reghin"}` going out on the old version. It was
+inconsistent, not absent. The fix — instructing it in the procedure — is the same either way, but
+"never" was wrong.)*
 
 Fixed: the availability step now sends `provider_type`, derived from the answer to intake question
 (2), with `doctor` stated as the safe default and the instruction to **leave it out entirely when the

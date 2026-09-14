@@ -44,6 +44,78 @@ halves stay in step.
 
 ---
 
+## 2026-09-15 (evening) — `check_availability` is the slow one, and we'd like a guard on it
+
+Two asks, both from real call data (`conv_8701m2fvjnjre698mhm84r3bw77c`,
+`conv_2401m27fwpb5fx9ahtgsfdcz8xpr`, both on `agtvrsn_7301m239c0jtfm5bnwrydrv11mff`).
+
+### 1. Measured `check_availability` latency is 3.8–5.1 s, not 1.5–2.5 s
+
+We reported 1.5–2.5 s earlier. That was wrong, and it mattered — we optimised the wrong thing.
+Actual `tool_latency_secs` from the conversation records:
+
+| Call | Params | Latency |
+|---|---|---|
+| Reghin, optometrist | `{"provider_type":"optometrist","location":"Reghin"}` | **5.12 s** |
+| Republicii | `{"location":"Republicii"}` | **3.79 s** |
+
+For comparison `book_appointment` was **2.91 s** in the same call. So `check_availability` is roughly
+**twice** the cost of booking, and it is the single biggest contributor to the silence a caller hears.
+Your 7 → 3 work was on the **cancel** path; as far as we can tell `check_availability` has not been
+looked at.
+
+**What we're asking:** is there headroom here? Specifically — does a lookup with a `location` still
+scan every calendar at that branch across the full day window, and could the `provider_type` filter
+be applied *before* the `get_work_days` fan-out rather than after? A branch like Republicii has
+several calendars, and if each one is a separate evolvo call then filtering first would cut most of
+them. If it is already doing that, tell us and we will stop looking here too.
+
+### 2. A guard so we can't call the tool before we know enough
+
+Per the design note in the repo README — *"the deterministic procedure engine skips ask-steps in
+roughly one run in three, whatever the wording… prefer a new guard in n8n over a new sentence in the
+prompt"* — we would rather you enforce this than us keep rewording it.
+
+Two cases we keep seeing, both of which spend 4–5 s to learn nothing:
+
+- **`check_availability` with a bare city of `Targu Mures`.** Six branches, so it comes back
+  `too_many_matches`. The branch list is already in our prompt and knowledge base; we should never
+  be spending a round trip on it. We have now forbidden it prompt-side, but a guard would make it
+  stick.
+- **`check_availability` with neither `doctor` nor `provider_type`.** Under Zsófi's rule (now wired
+  in, see below) exactly one of those is always known by the time we may legitimately look: either
+  the caller named a person, or the purpose of the visit determined the provider type. **Neither
+  being present means the agent skipped asking what the visit is for** — which is exactly the
+  ordering bug visible in both transcripts, where the purpose gets asked *after* the slot is
+  accepted.
+
+**Proposed:** reject both cheaply, before any evolvo call, with an error in the same shape as your
+existing ones — say `missing_purpose` and `choose_branch` — carrying a short line the agent can act
+on ("ask what the visit is for, then look again" / "ask which branch: Poștei, Trandafirilor, Doja").
+A fast rejection is far better for the caller than a slow `too_many_matches`. Push back if you think
+either guard would misfire — the named-doctor case is the one to be careful with, since
+`provider_type` is legitimately absent there, which is why the guard must accept *either* field.
+
+### For information — Zsófi's visit-reason rule is in
+
+> *"ha sima szemüvegfelírás, szemüvegcsere, dioptriaellenőrzés — akkor mindenképp optometrista legyen.
+> Ha szembetegség, OCT, szemnyomásmérés, szűrővizsgálat, vagy egyebet mond a páciens, akkor mehet az
+> orvoshoz."*
+
+No change needed from you — `provider_type` already does exactly what we need. Notes:
+
+- It confirmed the mapping already written on the tool. The gap was on our side: the booking
+  procedure never *instructed* the agent to send it, so it went only when the LLM chose to from the
+  tool description — the Reghin call above did send it, others did not. It is now instructed, so
+  expect `provider_type` on **most** lookups rather than some.
+- **Expect more `no_provider_of_type`.** On that error for an optometrist visit the agent now
+  re-searches with the same `provider_type` and **no `location`**, to find a branch that has one,
+  rather than falling back to a doctor at the requested branch. That is the client's decision, not
+  an assumption on our part. So a caller asking for glasses at Fortuna will now generate two
+  lookups — which is another reason the latency in item 1 matters.
+
+---
+
 ## 2026-09-14 — n8n reply: all three shipped or answered
 
 Answering the round below. **1(a) confirmed, 1(b) built, 1(c) inconclusive but for an interesting
