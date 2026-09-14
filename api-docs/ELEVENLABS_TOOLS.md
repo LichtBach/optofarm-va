@@ -1,13 +1,15 @@
 # ElevenLabs voice-agent tools → n8n webhooks (Optofarm)
 
-All four tools live as separate branches inside the single n8n workflow **"Optofarm - WIP"** (id `jLUnlrt9zM8VWZvp`) on `https://n8n.splitagency.biz.id` — one webhook trigger per tool (node prefixes: `CA`, `BOOK`, `FIND`, `MAN`), plus the original API tester chain, whose trigger is now a **manual trigger** (run it with "Execute workflow" in the editor; it no longer has a live URL, since it creates a real booking each run). Each tool is a POST webhook returning JSON. All requests **must** carry the auth header, or n8n rejects them with 403 before the workflow even runs:
+All five tools live as separate branches inside the single n8n workflow **"Optofarm - WIP"** (id `jLUnlrt9zM8VWZvp`) on `https://n8n.splitagency.biz.id` — one webhook trigger per tool (node prefixes: `CA`, `BOOK`, `FIND`, `MAN`, `LOG` — `log_request` is §5 below), plus the original API tester chain, whose trigger is now a **manual trigger** (run it with "Execute workflow" in the editor; it no longer has a live URL, since it creates a real booking each run). Each tool is a POST webhook returning JSON. All requests **must** carry the auth header, or n8n rejects them with 403 before the workflow even runs:
 
 ```
-X-Optofarm-Secret: be042391bfe184dfb3674f69c786a64306baf30857001668
+X-Optofarm-Secret: $OPTOFARM_WEBHOOK_SECRET
 Content-Type: application/json
 ```
 
-(The secret lives in the n8n credential "Optofarm Webhook Secret"; the evolvo API key lives in credential "Evolvo API Key" — nothing is hardcoded in the workflow. Session tokens are cached 45 min in the workflow's shared static data (all four branches reuse one token), so `get_auth.php` is called rarely.)
+(The secret value is deliberately **not** in this repository — it lives in the n8n credential "Optofarm Webhook Secret", and on the ElevenLabs side as a workspace secret referenced by each tool. Export it as `OPTOFARM_WEBHOOK_SECRET` to use the curl examples below.
+
+The evolvo API key likewise lives in the n8n credential "Evolvo API Key" — nothing is hardcoded in the workflow. Session tokens are cached 45 min in the workflow's shared static data (all four branches reuse one token), so `get_auth.php` is called rarely.)
 
 All tools return HTTP 200 with a JSON body; failures are expressed as `{"success": false, "error": "...", ...}` with hints written *for the agent* — the error payloads tell the LLM what to ask the caller next.
 
@@ -86,6 +88,10 @@ Error answers that mean **nothing was changed**: `confirm_appointment_first` (wi
 
 After `reschedule`, the agent runs check_availability + book_appointment for the new slot, reusing the `person` name from the confirmed appointment rather than asking the caller for one.
 
+**Slot release on reschedule (2026-09-14).** evolvo state 3 (`Trebuie reprogramat`) does **not** release the old slot — only state 2 (cancel) does. So `reschedule` marks the record *and remembers it*; the old record is cancelled automatically by `book_appointment` once the replacement booking succeeds, in the same conversation. The booking response then carries `replaced_appointment {ref, person, date, time, doctor, location, cancelled}` and the `note` says the earlier appointment was cancelled and its slot released. **The agent must not call manage_appointment again to cancel the old one** — it is already gone.
+
+The hand-off is keyed on `conversation_id` (both tools already send `system__conversation_id`) and additionally requires the booking phone to match the marked appointment's phone — so booking for a *different* number later in the same call never cancels the first person's appointment. If the call ends before a replacement is booked, the record simply stays at `needs_reschedule` holding its slot, which is the safe failure: staff see it and call back. Order matters: **mark first, then book.** Booking before marking leaves the old slot blocked.
+
 ### Phone-only identification (2026-09-09)
 The old identity check was phone **+ full name**, with fuzzy name matching in n8n. It failed in practice: a caller saying "Csergo Zsofia" came through as "Cerches Zofia", which no fuzzy match can rescue. Names are now out of the identification path entirely:
 
@@ -97,6 +103,25 @@ The old identity check was phone **+ full name**, with fuzzy name matching in n8
 Consequence to keep in mind: a caller who dictates a number hears the names of everyone with an appointment on it. That is deliberate (one phone covers a family) but it is the one privacy trade-off in this design.
 
 ---
+
+## Slot release — verified live 2026-09-14
+
+Imreh reported that cancelling frees the reserved slot. Confirmed end to end against Dr. Baricz Anna / Fortuna / 2026-09-22:
+
+| Action | Effect on the slot |
+|---|---|
+| book (lead **or** CRM-linked appointment) | blocked immediately |
+| `cancel` (state 2) | **free again ~8 s later**, and genuinely re-bookable |
+| `reschedule` (state 3) | **still blocked** — state 3 never releases it |
+| `confirm` (state 1) | stays blocked (correct), state → `confirmed`, `ref` stable |
+
+This retires the older note that release lagged ~50 minutes, and also retires "leads don't block the slot" — leads block instantly, exactly like real appointments.
+
+Two defects found by that test and fixed in n8n the same day:
+1. state 3 left the old slot consumed forever on every reschedule → the automatic hand-off described under manage_appointment above;
+2. `Trebuie reprogramat` was missing from the Romanian→English state map in `FIND Format Results` / `MAN Find Target`, so the raw Romanian leaked to the agent. The map now also carries `trebuie reprogramat` → `needs_reschedule` and `reprogramat` → `rescheduled`.
+
+New nodes in the BOOK branch: `BOOK Resched Pending?` (if) → `BOOK resched update_schedule.php` (http) → `BOOK Resched Done` (code, now the webhook's last node and therefore the responder). `BOOK Validate Input` additionally emits `conversation_id`; `MAN Format Update` writes the pending entry into workflow static data (`sd.pendingResched`, 6 h TTL); `BOOK Format Booking` consumes it (read-and-delete, so it can fire at most once).
 
 ## Smoke-test results (2026-09-02, all live)
 
@@ -128,12 +153,12 @@ Still not verified: manage_appointment's update path (blocked until get_schedule
 ```bash
 curl -X POST https://n8n.splitagency.biz.id/webhook/optofarm-check-availability \
   -H "Content-Type: application/json" \
-  -H "X-Optofarm-Secret: be042391bfe184dfb3674f69c786a64306baf30857001668" \
+  -H "X-Optofarm-Secret: $OPTOFARM_WEBHOOK_SECRET" \
   -d '{"doctor":"Baricz","location":"Fortuna"}'
 
 curl -X POST https://n8n.splitagency.biz.id/webhook/optofarm-book-appointment \
   -H "Content-Type: application/json" \
-  -H "X-Optofarm-Secret: be042391bfe184dfb3674f69c786a64306baf30857001668" \
+  -H "X-Optofarm-Secret: $OPTOFARM_WEBHOOK_SECRET" \
   -d '{"full_name":"TEST TEST","phone":"0700000010","date":"2026-09-15","time":"09:00","doctor":"Baricz","location":"Fortuna","problem":"TEST - please ignore"}'
 ```
 
