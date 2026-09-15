@@ -4,6 +4,66 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-15 (evening) — speaking dates from n8n's fields, and tone after a language switch
+
+### 1. The agent was doing date arithmetic and getting it wrong
+
+Reported from `conv_4701m2jk8460e2es63a4zbc5j21c` / n8n execution 1409. n8n returned
+`earliest 2026-09-16 15:40`; the agent said *"astăzi, marți 15 septembrie, ora 15:40"* — a slot that
+had gone forty minutes earlier. The next offer, `2026-09-17 10:00`, came out as *"mâine, miercuri 16
+septembrie"*. Both exactly one day early, weekday name included. **n8n's data was right both times**
+and could not have contained anything for today: `date_searched_from` was tomorrow.
+
+n8n has shipped the fix on its side — every date now carries `date_spoken` (`"Wednesday 16
+September"`, English, to be translated) and `relative_day` (`today` / `tomorrow` / `the day after
+tomorrow` / `in N days` / `IN THE PAST - do not offer this`), plus a top-level `today` on
+`check_availability`. Contract: "Speaking dates" in `api-docs/ELEVENLABS_TOOLS.md`.
+
+`# The clock and the calendar` rewritten around those fields. `{{system__time}}` is now explicitly
+demoted to *understanding* a caller who says "next Tuesday" — never to producing a spoken date:
+
+> YOU DO NOT CALCULATE DATES. EVER. [...] Say `date_spoken` translated, say today or tomorrow ONLY
+> when `relative_day` is exactly that word, never work a weekday out from the YYYY-MM-DD date, and
+> never read that date aloud — it is for sending back to the booking tool, not for speaking.
+
+**A correction to this morning's work.** The `evolvo_check_availability` description written earlier
+today said *"work the weekday out from the current date and time given in your system prompt"* —
+which is precisely the arithmetic that failed. That sentence was mine, it was live for a few hours,
+and it is now replaced with the `date_spoken` / `relative_day` rule. `date_from` also now documents
+that evolvo rejects a non-future date.
+
+**Regression test** `test_0801m2jn3v05fstbq6q9fv6xpszs` — an LLM-response test seeded with the real
+payload shape (`date_spoken: "Wednesday 16 September"`, `relative_day: "tomorrow"`,
+`system__time` pinned to the hour of the live failure) and failing on "astăzi", on 15 septembrie, on
+a wrong weekday, or on reading the ISO date aloud. **5/5 pass**, every run answering *"este mâine,
+miercuri 16 septembrie, la ora 15:40"*.
+
+### 2. Tone reset after a language switch
+
+Reported: after switching, the agent changes tone and sometimes opens with "Hello!" before the
+actual answer. Added to the language gate:
+
+> AFTER THE SWITCH, JUST CARRY ON. The tool call is invisible to the caller: it is not a new call,
+> not a new conversation, and not a reason to start over. Same warmth, same pace, same person. Do
+> NOT greet them again [...] and make no sound, no filler and no announcement before your reply.
+
+With one carve-out, so it does not fight the greeting rule: a greeting is still the right reply when
+the caller's own first words were a greeting.
+
+### Still open, and not ours to close
+
+`check_availability` searches from tomorrow and evolvo's `get_work_days.php` rejects a non-future
+`date_from`, so **a same-day appointment cannot be offered at all**. That is a product limit, not a
+defect. The prompt now states it and tells the agent to give the branch's direct number and offer a
+transfer instead. Worth a decision from Optofarm if same-day booking is ever wanted.
+
+Item 5 of the README handover ("the agent speaks dates a day early — one prompt sentence is still
+missing") is **done on this side**; tick it once `n8n/spoken-date-labels` and this branch both land.
+
+**Prompt: 26,951 → 28,167 characters.** Third increase today, each against a reported defect. The
+prompt is now 4,836 characters longer than it started this morning, which is worth a compression
+pass once the current round of fixes has been through a live call.
+
 ## 2026-09-15 (later still) — the gate verified, 10/10
 
 The accent fix was deployed blind, so it got a test harness. ElevenLabs **tool-call unit tests**
