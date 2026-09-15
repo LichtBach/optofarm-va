@@ -827,3 +827,43 @@ landmarks for all eight branches.
 - Website "Puncte de lucru" page says `Sâmbătă: închis` for every branch, contradicting the
   prompt and both FAQ docs on Poștei being open 9–2.
 - LLM is now `qwen35-397b-a17b` (was `gpt-5.6-luna`); `agent_last_updated_from: "ui"`.
+
+## 2026-09-15 (later) — knowledge base: website crawl replaced
+
+### Audit of the scraped site (folder `MhVjolXAcypPXVvWoAVL`, "optica-optofarm.ro Crawl Job (2026-07-30)")
+18 URL documents, 101,242 bytes, all in the RAG pool competing for the 6 chunks
+retrieved on every turn:
+
+| group | docs | bytes | verdict |
+|---|---|---|---|
+| cookie + privacy policy, RO and HU | 4 | 40,384 | junk — 40% of the crawl |
+| homepage, scraped twice for RO and twice for HU | 4 | 22,108 | `optica-optofarm.ro` and `.../` byte-identical (5,540 each) |
+| Medici, RO and HU | 2 | 5,277 | **guardrail hazard** — a doctor/branch list the prompt forbids using |
+| Servicii + Fabrica de lentile, RO and HU | 4 | 19,509 | duplicated by FAQ §18/§19 |
+| Contact, RO and HU | 2 | 3,306 | only the general e-mail; B2B number is on Fabrica de lentile |
+| Puncte de lucru, RO and HU | 2 | 10,658 | the only load-bearing data |
+
+Replaced with one authored bilingual document, `FUSHtAQki9sjGxN7tswc`
+(~2.9 KB): eight branches with address in both languages, weekday and Saturday
+hours, direct phone number, plus the B2B/lens-factory contact.
+**101,242 B → ~2,900 B (−97%), 18 documents → 1.**
+
+### Correction to the earlier entry
+The claimed contradiction between the website and the FAQ over Saturday hours was
+**wrong**. The Puncte de lucru page lists each branch's hours *above* its address
+heading, so the `Sâmbătă: închis` blocks I first read belonged to neighbouring
+branches. Poștei does show `Sâmbătă: 09:00 – 14:00`, matching the FAQ and the prompt.
+The page also shows Poștei open to **21:00** on weekdays, not 20:00 — a fact the
+agent did not previously hold. It is now in the new document.
+
+### Confirmed effect on retrieval
+Before, a directions query returned the cookie-policy page at rank 1
+(`vector_distance` 0.130) ahead of the FAQ (0.137). After the FAQ de-duplication,
+the same kind of query returns all six chunks from the two curated FAQ docs, with
+the landmark list at ranks 1 and 2, and no policy page at all.
+
+### Note
+A newly created knowledge-base document is not retrievable immediately — its RAG
+index is built asynchronously, and the MCP surface exposes no
+compute-rag-index call. Verify with `agents_query_knowledge_base_rag` before
+deleting anything the new document is meant to replace.
