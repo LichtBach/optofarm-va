@@ -4,6 +4,67 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-15 (evening, 4) — `gpt-5.4-nano` tried and reverted the same hour
+
+After the decoding collapse above, the obvious question was whether a different model would hold up
+better. Switched the agent LLM from `qwen35-397b-a17b` to `gpt-5.4-nano` and ran the four regression
+tests built today, five repeats each, against the live Main version
+(`agtvrsn_7801m2jqw18he2k9hjb2rnw91qb7`, suite `suite_0001m2jqwgffftzarv7hgnqathz1`).
+
+It is worse. Reverted to `qwen35-397b-a17b` within the hour.
+
+| test | qwen | gpt-5.4-nano |
+|---|---|---|
+| Language gate: RO question, HU answer | 5/5 | **5/5** |
+| Language gate: caller opens in Hungarian | 5/5 | **1/5** |
+| Dates: speak `date_spoken`, never derive today | 5/5 | **3/5** |
+| No second greeting after a language switch | 5/5 | **5/5** |
+| | **20/20** | **14/20** |
+
+### The Hungarian gate failure is a comprehension failure, not a rule failure
+
+The test history is one Romanian opening line followed by the caller saying
+*"Jó napot kívánok! Szombaton nyitva vannak?"* — unambiguous Hungarian. `gpt-5.4-nano` did call
+`language_detection` every single time, so the gate rule itself landed. It passed the wrong
+language:
+
+```
+language_detection {"reason":"Caller greeting in Romanian; ensure Romanian voice.","language":"ro"}
+```
+
+Four of five runs, three of them with that near-identical rationale. The model read a Hungarian
+sentence and asserted it was Romanian. That is the exact bug the client reported — Hungarian spoken
+with a Romanian accent — reintroduced by the model rather than by the prompt, and no prompt wording
+fixes a model that cannot tell the two languages apart.
+
+The fifth run passed, which is the same temperature-0 non-determinism seen all day.
+
+### The dates failures are empty turns
+
+The three passes were clean and correct — *"mâine, miercuri 16 septembrie, la 15:40"*, taken from
+`date_spoken`/`relative_day` exactly as instructed. The two failures graded `unknown`, with the
+judge noting:
+
+> The provided transcript ends after the tool result, and the agent has not yet provided a verbal
+> response to the user.
+
+The model called the tool, received the slots, and then said nothing at all. On a phone call that is
+dead air after a pause the caller can already hear.
+
+### Also noticed, not blocking
+
+Passing turns rendered as `mâ ine`, `do amna`, `Dr . Ilovan`, `15 :40` — stray spaces inside words
+and before punctuation. Whether that survives into TTS was not tested, and it may be an artifact of
+how the test harness reassembles the stream, so it is recorded rather than claimed.
+
+### On `max_tokens`
+
+Still `-1`, i.e. uncapped, which is why the garbled response in the previous entry ran for 8.77 s
+before the caller cut it off. A cap does not prevent a collapse; it bounds one. The prompt asks for
+one-to-two-sentence replies, so a cap in the region of 250 tokens leaves several times the headroom
+a real answer needs while cutting a runaway to roughly a second. The cost is that a genuinely long
+answer would be truncated mid-sentence with no graceful ending. Not applied — offered.
+
 ## 2026-09-15 (evening, 3) — garbled speech, and "Ifj." in a Hungarian name
 
 Two calls a minute apart. Different causes, and only one of them is ours.
