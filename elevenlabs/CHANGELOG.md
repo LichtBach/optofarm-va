@@ -4,6 +4,47 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-15 (later still) — the gate verified, 10/10
+
+The accent fix was deployed blind, so it got a test harness. ElevenLabs **tool-call unit tests**
+evaluate a single LLM turn against a fixed chat history: no simulation runs, no evolvo webhook is
+reachable, and no booking can be created. Two were written, the first reproducing the reported
+failure turn-for-turn.
+
+| Test | Before the first-turn fix | After |
+|---|---|---|
+| RO question, HU answer (`conv_4101...` turn-for-turn) | 3/3 pass | **5/5 pass** |
+| Caller's first words are Hungarian | 2/3 pass, 1 fail | **5/5 pass** |
+
+The first round confirmed the reported bug was fixed and exposed a second one: on the opening turn
+the agent sometimes answered the Hungarian question straight from the knowledge base with no tool
+call. The gate said "a language different from the one you are speaking right now", and on turn one
+the model did not treat Romanian as what it was already speaking. Added to the gate:
+
+> AT THE START OF EVERY CALL YOU ARE SPEAKING ROMANIAN, because your opening line is Romanian. So if
+> the caller's very first words are Hungarian or English, that is ALREADY a switch [...] even when
+> they asked a question you could answer straight away.
+
+Re-run: 10/10.
+
+**Worth noting for the model question.** `temperature` is 0, yet the same test gave different
+results across repeats in the first round — the serving stack is not deterministic. This is
+`qwen35-397b-a17b`, and a rule it follows 2 times in 3 is a rule that fails on roughly a third of
+Hungarian callers. The gate now passes 5/5, but pass rate is the thing to watch if this regresses.
+
+**Test ids** `test_5001m2jjecp0fjfvxc6jtgbby4yk` and `test_1201m2jjen87fc5scety0n07dsp7`, in the
+workspace Tests library. **They are deliberately NOT attached to the agent** — verified
+`platform_settings.testing.attached_tests` is still `[]` after the run. Attaching them breaks UI
+publishing on Main; see `deployment-blocked-by-attached-tests.md`. Run them with the API, never
+attach them in the UI.
+
+**Decisions taken by the client this round:** keep `eleven_v3_conversational` and accept one voice
+(Aggie) for all three languages, rather than trading expressiveness for per-language voices. So the
+English preset voice staying silent is accepted, not outstanding. With the gate working, English is
+at least pronounced as English rather than as Romanian.
+
+**Prompt: 26,484 → 26,951 characters.**
+
 ## 2026-09-15 (later) — the accent: the conversation never leaves Romanian
 
 Reported: Ana answers in Hungarian with a Romanian accent, and the same in English. One cause, and
@@ -69,10 +110,11 @@ message, and all of `charging.llm_usage`. The original flag was right. This is d
 qwen is the model that read an explicit instruction and did not follow it. Also worth noting,
 ~20,000 input tokens per turn with `input_cache_read: 0` throughout.
 
-**`pre_tool_speech` did not "revert on its own".** Writing the top-level `prompt` parameter resets
-`built_in_tools` to defaults — it happened again on this round's prompt write, in the same session,
-with nobody else touching the agent. **Always re-apply built-in tool settings after a prompt
-update, and verify.** Done here, verified `off`.
+**`pre_tool_speech` reverted twice.** This entry first blamed the prompt write for resetting
+`built_in_tools`. **That is not established:** two further prompt writes in the same session left
+`pre_tool_speech` at `"off"`, so the prompt write is not sufficient to cause it. Cause unknown; a
+concurrent UI save is the remaining candidate. The practical rule stands regardless: **re-read the
+built-in tool settings after every agent write and re-apply if they moved.**
 
 **Prompt: 25,780 → 26,484 characters.**
 
