@@ -4,6 +4,53 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-15 (evening, 5) — system prompt compressed 29,902 → 19,738 chars
+
+Motivation: a live call on `gpt-5.6-luna` showed ~14,100 cached input tokens per LLM turn, and the
+system prompt was the single largest piece of that we control. Target set by the client: main prompt
+under ~5,000 tokens. Live Main now at version `agtvrsn_9301m2jt0dy6exar7tb9mcds3nm9`.
+
+What changed in the prompt (mirror: `system-prompt.main.txt`):
+
+- **Every per-language phrasing example removed.** The old prompt spelled out Romanian, Hungarian and
+  English wordings for greeting-free reply lines, "I don't have that" lines, the reminder sentence,
+  digit-by-digit number examples, title forms (doamna doctor / doktornő / …), and the emergency line.
+  Each rule now states the behaviour once, language-neutrally ("say a reminder will be sent",
+  "never a greeting word", "the matching title in the caller's language"); the model handles the
+  surface language. This was the bulk of the saving.
+- Rationale paragraphs cut to one sentence where the rule already carried it (language gate, dates,
+  addressing, unknowns). Repeated "this is important / read this twice / there is NO exception"
+  emphasis dropped.
+- Sections merged: "Language and voice" + holding-line rule; "Voice and response rules" +
+  silent-response + repetition guard into `# Response rules`; phone read-back gate folded into
+  `# Numbers`; Ifj. rule folded into `# Doctors and optometrists`.
+- Nothing removed as a *rule*: the language gate (both directions, keyed on the language Ana is
+  about to speak), no second greeting, greeting-is-not-a-task with the language_detection carve-out,
+  Step 0 emergency and the 112 ban, date_spoken/relative_day and no date arithmetic, availability
+  starts tomorrow / no same-day, phone read-back gate, one question per turn, one-two sentences,
+  provider_type titling, Ifj. stripping for tools / saying it back, branch normalisation table,
+  Saturday = Poștei only, the unknowns list, reminder-not-confirmation, end-call rules, all guardrails.
+
+Size: 29,902 → 19,738 chars (−34%), 5,180 → 3,376 words. Token count could not be measured exactly
+(the tokenizer download is blocked from this environment); by word count it is roughly 4,300–4,700
+tokens on an OpenAI tokenizer, i.e. inside the ~5k target. The remaining ~9k of the 14k cached tokens
+is tool schemas (five evolvo tools, ~2,500 tokens of description text — see
+`prompt-optimization.md` for why they were left alone), built-in tools, procedure machinery, RAG
+context and the opening messages; those are not in the system prompt.
+
+Regression run: suite `suite_2401m2jt0wtxfpgvww6cr3765h8b`, the same four tests as the nano trial,
+five repeats each. **20/20** — Dates 5/5, RO question → HU answer gate 5/5, caller-opens-in-Hungarian gate 5/5, no second greeting 5/5. Same score the full-length prompt reached on qwen earlier today; the compression cost nothing on these four behaviours.
+
+Note on the LLM field: when this write went out, `conversation_config.agent.prompt.llm` read
+`gemini-3.5-flash-lite` with `reasoning_effort: minimal` — changed in the UI since the qwen revert
+earlier this evening; not touched here. The regression run therefore measures the compressed prompt
+on that model, not on qwen or Luna.
+
+Operational slip, recorded so it is not repeated: the first `agents_update` call for this change
+passed the literal string `$(cat)` as the prompt (shell substitution does not happen inside an MCP
+argument). The live prompt was six characters long for roughly one minute before the corrected write
+landed. Always `jq` the returned config for `prompt|length` after every write.
+
 ## 2026-09-15 (evening, 4) — `gpt-5.4-nano` tried and reverted the same hour
 
 After the decoding collapse above, the obvious question was whether a different model would hold up
