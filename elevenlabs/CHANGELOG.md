@@ -4,6 +4,86 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-15 (evening, 3) — garbled speech, and "Ifj." in a Hungarian name
+
+Two calls a minute apart. Different causes, and only one of them is ours.
+
+### 1. `conv_5501m2jq1mvff9t96nj7rj9y3rmw` — the model came apart
+
+17:20. Caller: *"I would like to make an appointment."* The agent called `start_procedure`
+successfully, entered `__xi_procedure__procedure_entry_...`, and then said this, out loud, to a real
+caller:
+
+```
+ 8a rrr \n "a r r rrr r r r r r r \n r\n " r",", r\n " " r ... "type herself",", " r r ...
+```
+
+**This is not a prompt defect and no prompt can fix it.** It is token-level decoding collapse:
+
+| | |
+|---|---|
+| `producing_llm` | `qwen35-397b-a17b` |
+| `convai_llm_service_ttfb` | 1.09 s |
+| `convai_llm_service_tt_last_sentence` | **8.77 s** — it streamed garbage for ~7.7 s |
+| `temperature` | **0** |
+| `max_tokens` | **-1** (uncapped) |
+| input tokens | 20,429, `input_cache_read: 0` |
+| `interrupted` | true — the caller cut it off |
+
+The trigger is most likely the procedure entry: `start_procedure` injects the
+`<current-active-structured-procedure>` block, context jumps, and the model fell into a repetition
+loop on the next generation. **At temperature 0 there is no way out of such a loop** — greedy
+decoding re-picks the same token forever — and with `max_tokens: -1` nothing bounds how long it
+rambles.
+
+A weak guard went into the prompt (stop if you notice yourself repeating, ask the caller to bear
+with you) but it is close to useless by construction: a model in a degenerate loop is not observing
+itself. **The real levers are the model, `temperature` off 0, and a `max_tokens` cap.** Raised with
+the client; no config change made unilaterally.
+
+**Also noted:** `conversation_config.agent.prompt.llm` now reads `qwen35-397b-a17b`. At 15:19 today
+it read `gpt-5.6-luna` with qwen serving anyway. Something changed the stored value between 15:19
+and 17:20 — which, together with `pre_tool_speech` reverting on 2 of 5 writes, points at UI saves
+landing on the agent mid-session.
+
+**Third failure from this model today**, after ignoring the language_detection instruction on ~1 in
+3 first-turn Hungarian openings and getting ISO-to-spoken date arithmetic wrong twice in one call.
+
+### 2. `conv_3301m2jq2k9afk9bpvv3996a0dcm` — "Iszovik Jeremiasz László"
+
+17:21. What the caller said, as Scribe transcribed it:
+
+> *"Iszovik Jeremiasz Lászlóhoz szeretnék időpontot foglalni."*
+
+**"Iszovik" is the ASR's version of "ifjabbik".** The caller asked for *ifjabbik Jeremiás László* —
+the younger — and the agent passed the mangled particle straight into `check_availability`.
+
+n8n's `nameMatch` requires **every** query token to match a calendar token
+(`qw.every(q => nw.some(...))`). "jeremias" and "laszlo" matched perfectly; "iszovik" matched
+nothing; the whole lookup failed. The agent then recovered well — it offered *"Optometrista Ifj
+Jeremias Laszlo"* and *"Optometrista Jeremias Zoltan"* and asked which — but to the caller it read
+as "the system can't find him".
+
+Fixed in two places, deliberately both, because a concrete instruction at the point of use beats a
+general rule elsewhere (that is what made the second-greeting bug survive its first fix):
+
+- **Prompt**, new `## "Ifj." in a Hungarian name`: what the particle means, never send it to a tool,
+  drop any leading word you are not confident you heard, and **say** it when naming the person back,
+  because where two people share a name it is the only thing that distinguishes them.
+- **`evolvo_check_availability`'s `doctor` parameter**, which said *"Provider's name AS THE CALLER
+  SAID IT"* — precisely the instruction that sent "Iszovik" through. It now says name only, explains
+  that every word must match so one wrong word fails the lookup, and names the particle. The
+  `no_match` branch also now says to retry without the uncertain leading word before offering
+  alternatives.
+
+**For the n8n side, not blocking:** adding `ifj`, `ifjabb`, `ifjabbik` to the `STOP` list in
+`CA Match Calendars` would strip the particle from both sides and make a correctly-transcribed
+"ifjabb Jeremiás László" match regardless of what the prompt does. It would not have saved this
+call — "Iszovik" is not in any stop list — so the prompt fix is needed either way. Worth considering
+whether `nameMatch` should tolerate one unmatched query token rather than requiring all of them.
+
+**Prompt: 28,650 → 29,902 characters.**
+
 ## 2026-09-15 (evening, 2) — the second greeting: the rule below was supplying it
 
 Reported again after the previous fix: the agent still says "Hello" / "Jó napot" after switching
