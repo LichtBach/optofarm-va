@@ -29,15 +29,36 @@ Ask the caller for city / preferred location / preferred doctor / date **before*
 | `date_from` | string, optional | YYYY-MM-DD, must be future; defaults to tomorrow. For "in 2 months" requests pass that future date — the API then scans the next ~15 working days of the doctor's schedule from there |
 | `provider_type` | string, optional | `doctor` or `optometrist` — **added 2026-09-11, not previously documented here.** Filters the calendars searched. Anything other than those two values is ignored (treated as unfiltered) rather than rejected. **Ignored entirely when `doctor` is given**, since naming a provider is more specific than naming a kind |
 
-Success: `results[]` per matching calendar (max 4) with `available_days[]` (`date`, `free_times[]` 24h, `total_free_slots`) and `slot_duration_minutes`; days with no free slot are dropped. Plus (added 2026-09-07):
-- `earliest` — `{date, time, doctor, location}`: the single earliest free slot across all matched calendars (the agent offers exactly this to urgent / "as soon as possible" / no-preference callers).
-- when `date_from` was sent: `requested_date`, `requested_date_status` (`available` | `not_available`) and, if available, `requested_date_slots` (`{date, time, doctor, location, free_times[]}` for that exact day).
+Success: `results[]` per matching calendar (max 4) with `available_days[]` (`date`, `date_spoken`, `relative_day`, `free_times[]` 24h, `total_free_slots`) and `slot_duration_minutes`; days with no free slot are dropped. Plus (added 2026-09-07):
+- `earliest` — `{date, date_spoken, relative_day, time, doctor, location}`: the single earliest free slot across all matched calendars (the agent offers exactly this to urgent / "as soon as possible" / no-preference callers).
+- when `date_from` was sent: `requested_date`, `requested_date_status` (`available` | `not_available`) and, if available, `requested_date_slots` (`{date, date_spoken, relative_day, time, doctor, location, free_times[]}` for that exact day).
+- `today` (added 2026-09-15) — today's date in Bucharest, so the agent never has to infer it. `date_searched_from` defaults to **tomorrow** and evolvo's `get_work_days.php` rejects a non-future `date_from`, so **no slot this tool returns is ever today**: a same-day appointment cannot be offered through it at all.
 
 Every result, plus `earliest` and `requested_date_slots`, also carries `provider_type` (`doctor` | `optometrist`). A top-level `provider_type_filter` echoes the filter **only when it actually ran** — naming a `doctor` bypasses the filter, so a missing echo is normal and must not be read as the filter having failed.
 
 Errors: `no_match` (includes `available_doctors`/`available_locations` to offer — the agent offers at most three), `too_many_matches` (ask caller to narrow down), `doctor_not_at_location` (the doctor exists but not at the requested branch; carries `doctor_locations[]` and `doctors_at_requested_location[]`), and `no_provider_of_type` (the branch has no provider of the requested kind — e.g. Fortuna has no optometrist).
 
 **How provider type is decided:** off the calendar-name prefix. Verified live on 2026-09-14 across all 30 calendars — 21 `Dr. …`, 9 `Optometrist …`, none unmatched. Every non-doctor is *explicitly* prefixed `Optometrist`; nothing is identified by the absence of "Dr.". The list is not static (it was 16 calendars on 2026-09-11), so re-verify after clinic changes. The mapping from *reason for the visit* to provider type is a prompt-side decision and is not made here — n8n only filters on what it is asked for.
+
+## Speaking dates — `date_spoken` / `relative_day` (added 2026-09-15)
+
+**Every date any of these tools returns carries two extra fields, and the agent must speak those rather than convert the ISO date itself.**
+
+| Field | Example | Meaning |
+|---|---|---|
+| `date` | `2026-09-16` | the machine date — pass it back to `book_appointment` / `manage_appointment`, never read it aloud |
+| `date_spoken` | `Wednesday 16 September` | weekday + day + month, in English, for the agent to **translate** into the caller's language |
+| `relative_day` | `tomorrow` | one of `today`, `tomorrow`, `the day after tomorrow`, `in N days`, or `IN THE PAST - do not offer this` |
+
+Why it exists: on a live call (2026-09-15 16:16, `conv_4701m2jk8460e2es63a4zbc5j21c`, n8n execution 1409) the webhook returned `earliest 2026-09-16 15:40` and the agent told the caller *"astăzi, marți 15 septembrie, ora 15:40"* — a slot 40 minutes in the **past**. When the caller declined, the next offer, `2026-09-17 10:00`, came out as *"mâine, miercuri 16 septembrie"*. Both were exactly one day early, weekday name included: the LLM was doing ISO→spoken date arithmetic and getting it wrong. n8n's data was correct in both cases, and — because `date_searched_from` was tomorrow — could not have contained anything for today.
+
+The fields above remove the arithmetic. Every `note` / `next_step` / `read_back` string in these responses now also ends with the rule itself:
+
+> *Never work out a date yourself and never re-read the ISO date: say `date_spoken` translated into the caller's language, and say today or tomorrow only when `relative_day` says so.*
+
+Present on: `check_availability` (`earliest`, every `available_days[]` entry, `requested_date_slots`), `find_appointments` and `manage_appointment` (every `appointments[]` / `appointment` entry, and the `read_back` string), `book_appointment` (`booked`, `replaced_appointment`).
+
+**Open on the ElevenLabs side:** nothing in the prompt tells the agent how to speak a date or forbids deriving one — the inline instruction in each tool result is the only thing steering it. One sentence in the appointment flow would close it, e.g. *"When you name a day, say the tool's `date_spoken` in the caller's language; call it today or tomorrow only if `relative_day` says so."*
 
 ## 2. book_appointment
 `POST https://n8n.splitagency.biz.id/webhook/optofarm-book-appointment`
@@ -56,7 +77,7 @@ Call **only after** the caller has confirmed all details out loud (read back nam
 | `email` | string, optional | |
 
 The workflow re-fetches the live slot list and books only if the exact date+time is still free — errors `date_not_available` / `time_not_available` include alternatives to offer the caller.
-Success: `booked{...}` + note that clinic staff will confirm. In evolvo this creates an "agenda insertion" (lead); if name+phone match an existing patient it becomes a real appointment tied to CRM history.
+Success: `booked{...}` (carrying `date`, `date_spoken`, `relative_day`, `time`) + note that clinic staff will confirm. In evolvo this creates an "agenda insertion" (lead); if name+phone match an existing patient it becomes a real appointment tied to CRM history.
 
 ## 3. find_appointments
 `POST https://n8n.splitagency.biz.id/webhook/optofarm-find-appointments`
@@ -71,7 +92,7 @@ Identity check = **the phone number alone**, dictated digit by digit (changed 20
 | `conversation_id` | string, auto | `system__conversation_id`, used for the gate |
 | `full_name` | string, ignored | still accepted for backwards compatibility; it filters nothing |
 
-Success: `found: true`, `count`, `persons[]` and `appointments[]`, each entry `{ref, person, date "YYYY-MM-DD", time "HH:MM", doctor, location, type, state, kind, manageable}` plus a `next_step` sentence telling the agent to read one back and get a yes. `ref` is a short stable handle derived from the record's `scheduleid` — it survives between the find call and the manage call and does not shift when another record appears or disappears. `found: false` means the phone has nothing in the next 31 days; the hint tells the agent to ask about another number and never to ask for a name.
+Success: `found: true`, `count`, `persons[]` and `appointments[]`, each entry `{ref, person, date "YYYY-MM-DD", date_spoken, relative_day, time "HH:MM", doctor, location, type, state, kind, manageable}` plus a `next_step` sentence telling the agent to read one back and get a yes. `ref` is a short stable handle derived from the record's `scheduleid` — it survives between the find call and the manage call and does not shift when another record appears or disappears. `found: false` means the phone has nothing in the next 31 days; the hint tells the agent to ask about another number and never to ask for a name.
 
 ## 4. manage_appointment
 `POST https://n8n.splitagency.biz.id/webhook/optofarm-manage-appointment`
@@ -110,7 +131,7 @@ Error answers that mean **nothing was changed**: `confirm_appointment_first` (wi
 
 After `reschedule`, the agent runs check_availability + book_appointment for the new slot, reusing the `person` name from the confirmed appointment rather than asking the caller for one.
 
-**Slot release on reschedule (2026-09-14).** evolvo state 3 (`Trebuie reprogramat`) does **not** release the old slot — only state 2 (cancel) does. So `reschedule` marks the record *and remembers it*; the old record is cancelled automatically by `book_appointment` once the replacement booking succeeds, in the same conversation. The booking response then carries `replaced_appointment {ref, person, date, time, doctor, location, cancelled}` and the `note` says the earlier appointment was cancelled and its slot released. **The agent must not call manage_appointment again to cancel the old one** — it is already gone.
+**Slot release on reschedule (2026-09-14).** evolvo state 3 (`Trebuie reprogramat`) does **not** release the old slot — only state 2 (cancel) does. So `reschedule` marks the record *and remembers it*; the old record is cancelled automatically by `book_appointment` once the replacement booking succeeds, in the same conversation. The booking response then carries `replaced_appointment {ref, person, date, date_spoken, time, doctor, location, cancelled}` and the `note` says the earlier appointment was cancelled and its slot released. **The agent must not call manage_appointment again to cancel the old one** — it is already gone.
 
 The hand-off is keyed on `conversation_id` (both tools already send `system__conversation_id`) and additionally requires the booking phone to match the marked appointment's phone — so booking for a *different* number later in the same call never cancels the first person's appointment. If the call ends before a replacement is booked, the record simply stays at `needs_reschedule` holding its slot, which is the safe failure: staff see it and call back. Order matters: **mark first, then book.** Booking before marking leaves the old slot blocked.
 

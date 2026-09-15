@@ -143,6 +143,22 @@ appointment). See [`n8n/CHANGELOG.md`](n8n/CHANGELOG.md) and
 4. **The ordering leak is fixed in wording but unproven in a call.** The ported `booking` procedure
    turns "never check availability before the purpose is known" from a rule into a stop condition.
    Watch it on the next smoke test rather than assuming it holds.
+5. **The agent speaks dates a day early — one prompt sentence is still missing (raised 2026-09-15).**
+   On a live call it offered a slot **40 minutes in the past**: n8n returned
+   `earliest 2026-09-16 15:40` and the agent said *"astăzi, marți 15 septembrie, ora 15:40"*, then
+   read `2026-09-17 10:00` back as *"mâine, miercuri 16 septembrie"*. Both a day early, weekday name
+   included — the model is doing ISO→spoken date arithmetic and getting it wrong, and n8n's data was
+   right both times (`conv_4701m2jk8460e2es63a4zbc5j21c`, n8n execution 1409).
+   **n8n side is done:** every date now ships with `date_spoken` (`"Wednesday 16 September"`, English,
+   to be translated) and `relative_day` (`today` / `tomorrow` / `the day after tomorrow` / `in N days` /
+   `IN THE PAST - do not offer this`), and every `note` / `next_step` / `read_back` repeats the rule
+   inline. See "Speaking dates" in [`api-docs/ELEVENLABS_TOOLS.md`](api-docs/ELEVENLABS_TOOLS.md).
+   **What is needed from your side:** a prompt rule, because the inline tool-result instruction is
+   currently the only thing steering the model. Something like *"When you name a day, say the tool's
+   `date_spoken` in the caller's language; call it today or tomorrow only if `relative_day` says so.
+   Never work a date out yourself."* Also worth knowing: `check_availability` searches from **tomorrow**
+   and evolvo rejects a non-future `date_from`, so **no slot it returns is ever today** — if the agent
+   ever says "today", it has misread the data, and a same-day appointment simply cannot be offered.
 
 ### Open — n8n side, answered 2026-09-14
 
