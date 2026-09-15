@@ -3,6 +3,65 @@
 Newest first. Every entry is a change to the live workflow **Optofarm - WIP**
 (`jLUnlrt9zM8VWZvp`) on `https://n8n.splitagency.biz.id`.
 
+## 2026-09-15 — `date_spoken` / `relative_day`: the agent was offering slots in the past
+
+Reported from a live call: the agent offered a time 40 minutes in the **past**. n8n was not at fault
+— and that is the point of this entry, because the next person to see it will suspect n8n too.
+
+**What actually happened.** Execution 1409 (13:15 UTC) / conversation `conv_4701m2jk8460e2es63a4zbc5j21c`.
+The webhook returned `earliest {date: "2026-09-16", time: "15:40", doctor: "Dr. Ilovan Anca"}` with
+`date_searched_from: "2026-09-16"`. The agent said *"astăzi, marți 15 septembrie, la ora 15:40"*.
+When the caller declined, it offered Dr. Popa Camelia's `2026-09-17 10:00` as
+*"mâine, miercuri 16 septembrie, la ora 10:00"*. Both spoken dates are **exactly one day earlier
+than the data, with the weekday name matching the wrong date** — the LLM (`qwen35-397b-a17b`) was
+converting ISO dates to spoken dates itself and was consistently a day out. The October dates in the
+same response, also reported as wrong, were real: Dr. Ardelean Adina has nothing free before 2 Oct.
+
+Worth stating plainly: **nothing this workflow returns can ever be today.** `date_from` defaults to
+tomorrow and evolvo's `get_work_days.php` rejects a non-future `date_from`, so a slot described as
+"today" is always a misreading, never stale data.
+
+**The fix — take the arithmetic away from the model.** Every date the workflow emits now carries:
+
+- `date_spoken` — `"Wednesday 16 September"`: weekday + day + month in English, for the agent to
+  *translate*, not compute.
+- `relative_day` — `today` / `tomorrow` / `the day after tomorrow` / `in N days` /
+  `IN THE PAST - do not offer this`.
+
+and every `note` / `next_step` / `read_back` string ends with the rule: *never work out a date
+yourself, say `date_spoken` translated, and say today or tomorrow only when `relative_day` says so.*
+`check_availability` also gained a top-level `today`.
+
+Seven Code nodes, no graph change (122 nodes, connections and positions untouched):
+
+| node | change |
+|---|---|
+| `CA Format Slots` | labels on `earliest`, every `available_days[]` entry and `requested_date_slots`; top-level `today`; extended `note` |
+| `FIND Format Results` | labels in `publicView`; rule appended to both `next_step` variants |
+| `MAN Find Target` | labels in `publicView`; `read_back` now reads the spoken date; rule at the head of the `confirm_appointment_first` message |
+| `MAN Format Update` | carries `date_spoken` into `sd.pendingResched` so the BOOK tail can speak it |
+| `MAN Release Done` | the released-slot `note` says the spoken date, not the ISO one |
+| `BOOK Format Booking` | labels on `booked`; rule appended to the `note` |
+| `BOOK Resched Done` | `date_spoken` on `replaced_appointment` and in its `note` |
+
+The helper is duplicated into each node (n8n Code nodes cannot share a module). It is independent of
+the n8n host's timezone — today comes from `toLocaleDateString('en-CA', {timeZone: 'Europe/Bucharest'})`
+and the weekday from a UTC-noon parse of the ISO date — and returns `{}` for a malformed date rather
+than a plausible-looking wrong label.
+
+Verified live against the failing query (`{provider_type: "doctor", location: "Postei"}`): `earliest`
+came back `2026-09-16` / `Wednesday 16 September` / `tomorrow`, and the `2026-10-02` day as
+`Friday 2 October` / `in 17 days`. The `requested_date` path and the FIND/MAN `publicView` labelling
+were checked too. Rollback bodies for all seven nodes: [`date-label-nodes-rollback-2026-09-15.json`](date-label-nodes-rollback-2026-09-15.json).
+
+**Still open, and prompt-side:** nothing in the agent prompt tells it how to speak a date or forbids
+deriving one, so the inline instruction in each tool result is the only thing steering it. See the
+handover note in the root `README.md`.
+
+Also in this commit: the evolvo API key, still hardcoded in the tester chain's `get_auth.php` node,
+is redacted in the committed export. It remains in this repository's git history — see the standing
+credential-rotation item.
+
 ## 2026-09-14 (evening) — `slot_released`, and the cancel path from 7 evolvo calls to 3
 
 Answers the round in [`REQUESTS_FROM_ELEVENLABS.md`](REQUESTS_FROM_ELEVENLABS.md). 115 → **122 nodes**.
