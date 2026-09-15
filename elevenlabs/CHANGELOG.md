@@ -4,6 +4,78 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-15 (later) — the accent: the conversation never leaves Romanian
+
+Reported: Ana answers in Hungarian with a Romanian accent, and the same in English. One cause, and
+it is not the voice.
+
+### The proof
+
+`conv_4101m2jheahtfjcbdym5z0dgtzpw`, 15:43. `features_usage.language_detection: {"enabled": true,
+"used": false}`.
+
+```
+agent  Bună ziua! Cu ce vă pot ajuta astăzi?
+user   Vorbiți și maghiară?              <- Romanian
+agent  Igen, beszélek magyarul. Miben segíthetek?   <- Hungarian, no tool call
+```
+
+`main_language` stayed `ro`, so Hungarian text was rendered under Romanian pronunciation. The base
+voice is `Dme3o25EiC1DfrBQd73f` — Aggie, confirmed `language: "hu"` — so a Hungarian voice was made
+to read Hungarian with Romanian phonetics. Same mechanism for the English complaint from earlier
+today.
+
+**Why the previous round missed it.** The rule was keyed on *the caller* changing language. Here the
+caller never changed: they asked in Romanian and Ana chose to reply in Hungarian. Worse, the
+greeting rule added in the same round said *"do not call a tool"* for a bare greeting — which
+blocks `language_detection` at the single most common switch point of all, a caller who opens in
+Hungarian or English.
+
+### Fixed
+
+`# THE LANGUAGE GATE` is now the first section of the prompt, keyed on the language **Ana is about
+to speak**, with the Romanian-question-Hungarian-answer case spelled out. The greeting rule now
+carves out exactly one tool and says the gate wins. Tool description rewritten to match.
+
+### Not fixed, and not fixable from the prompt: the preset voice is never applied
+
+`conv_5801m2jd7agwemy9qttvxt7b4m87` is the control. The tool **did** fire
+(`language_detection: used: true`, `{"language":"en","status":"success"}`), two English turns of
+audio followed — and:
+
+```
+tts_usage.per_voice_usage: [ {"voice_id":"Dme3o25EiC1DfrBQd73f", "audio_output_seconds": 21.52} ]
+```
+
+Lara (`vChnJZ1Cu89g2XXumPfT`, the `en` preset voice) produced **zero seconds**. The presets are
+correctly structured, and `platform_settings.overrides` is not the blocker — that governs
+client-supplied overrides, not presets. The remaining explanation is that
+`eleven_v3_conversational` pins the voice for the session and only the language changes.
+
+Consequences, stated plainly:
+
+- **Hungarian is fixed by the gate alone**, because the `hu` preset voice *is* the base voice
+  (Aggie). Only the language code needs to change, and Aggie is a real Hungarian voice.
+- **English is improved but not solved**: it will be pronounced as English rather than as Romanian,
+  but in Aggie's Hungarian-timbre voice, until the preset voice applies. That needs a TTS-model
+  decision, not a prompt change.
+
+### Two corrections
+
+**The LLM.** The previous entry said Main reads `gpt-5.6-luna` so the earlier `qwen35-397b-a17b`
+flag no longer stood. That was reading the wrong field. `conversation_config.agent.prompt.llm` does
+say `gpt-5.6-luna`, but **every turn is produced by `qwen35-397b-a17b`** — `producing_llm` on each
+message, and all of `charging.llm_usage`. The original flag was right. This is directly relevant:
+qwen is the model that read an explicit instruction and did not follow it. Also worth noting,
+~20,000 input tokens per turn with `input_cache_read: 0` throughout.
+
+**`pre_tool_speech` did not "revert on its own".** Writing the top-level `prompt` parameter resets
+`built_in_tools` to defaults — it happened again on this round's prompt write, in the same session,
+with nobody else touching the agent. **Always re-apply built-in tool settings after a prompt
+update, and verify.** Done here, verified `off`.
+
+**Prompt: 25,780 → 26,484 characters.**
+
 ## 2026-09-15 — a past slot offered as "today", optometrists called doctors, and silent tool calls
 
 Three defects reported from live calls. Two were reproduced from the transcripts before anything was
