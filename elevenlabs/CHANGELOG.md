@@ -4,6 +4,47 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-15 (evening, 2) — the second greeting: the rule below was supplying it
+
+Reported again after the previous fix: the agent still says "Hello" / "Jó napot" after switching
+language. The gate rule added an hour earlier said *do not greet them again* — and it lost, because
+of two things I had put there myself.
+
+**1. The greeting rule was handing it the greeting.** `A GREETING IS NOT A TASK` listed the lines to
+reply with, and every one of them opened with a greeting word:
+
+```
+Romanian "Bună ziua! Cu ce vă pot ajuta?"   Hungarian "Jó napot! Miben segíthetek?"
+English  "Hello! How can I help you today?"  ...  "Üdvözlöm! Mondja, kérem."
+```
+
+A prohibition in one section cannot beat a concrete example in another. The examples now carry no
+greeting word at all — `"Miben segíthetek?"` / `"Mondja, kérem."` / `"Hallgatom."` and the Romanian
+and English equivalents — with the reason stated: **the opening message already said hello, and that
+is the only greeting the call gets.**
+
+**2. My own carve-out.** The gate ended with *"The one exception is when a greeting is genuinely the
+answer to what they just said, because their first words to you were a greeting"* — which is
+precisely the reported case, since a caller who opens in Hungarian usually opens by saying hello.
+Removed and replaced with "There is NO exception to this."
+
+**Scope note.** This is now absolute rather than switch-only: Ana never greets twice in any language.
+The double greeting was never really about switching — her opening line already says "Bună ziua", so
+replying "Bună ziua!" to a Romanian caller was the same defect, just less audible. If the Romanian
+greeting is wanted back, it is one line in `A GREETING IS NOT A TASK`.
+
+**Test** `test_9601m2jpwdyzfkt9kv51r4ewpadd`: Romanian opening line, caller says "Jó napot
+kívánok!", `language_detection(hu)` succeeds, and the reply is judged **only** on whether any
+greeting word is present, in any language, anywhere in the line. **5/5 pass** — every run answered
+`"Miben segíthetek?"`.
+
+**`pre_tool_speech` again.** It reverted to `auto` on this round's prompt write and was re-applied.
+Running count: **2 of 4 prompt writes this session reset it, 2 did not.** So the earlier entry's
+"not established" still stands as to cause, but the write is clearly implicated. Re-read and
+re-apply after every agent write; do not assume it held.
+
+**Prompt: 28,167 → 28,650 characters.**
+
 ## 2026-09-15 (evening) — speaking dates from n8n's fields, and tone after a language switch
 
 ### 1. The agent was doing date arithmetic and getting it wrong
