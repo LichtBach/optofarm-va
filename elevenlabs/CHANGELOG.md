@@ -4,6 +4,106 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-15 — a past slot offered as "today", optometrists called doctors, and silent tool calls
+
+Three defects reported from live calls. Two were reproduced from the transcripts before anything was
+changed; the third was visible in the tool configuration.
+
+### 1. "Locuri libere chiar astăzi, 15 septembrie, de la ora nouă" — at 13:52
+
+`conv_9601m2jaxsfje7eandzfxxpafbvt`, 2026-09-15 13:48:40 EEST. The caller asked who works at
+Bulevard and when they are free. What `evolvo_check_availability` actually returned:
+
+```
+"date_searched_from":"2026-09-16"
+Dr. Elekes Ella  … "date":"2026-09-16","free_times":["09:00", …]
+Dr. Ilovan Anca  … "date":"2026-09-17","free_times":["12:00", …]
+Dr. Tripon Robert… "date":"2026-09-16","free_times":["14:00", …]
+```
+
+What the agent said: *"Doamna doctor Elekes Ella are locuri libere **chiar astăzi, 15 septembrie**,
+începând cu ora nouă dimineața. Doamna doctor Ilovan Anca are programări disponibile **mâine, 16
+septembrie**, de la ora doisprezece, iar domnul doctor Tripon Robert are locuri libere **astăzi** de
+la ora paisprezece."*
+
+Every one of those three days is wrong, each shifted back by one. **n8n is not at fault:**
+`CA Validate Input` sets `date_from = tzDate(1)`, so the search starts tomorrow and today is never
+returned at all. The fault is that **the agent had no idea what today's date was.** Nothing in the
+prompt carried it, so mapping `2026-09-16` onto a weekday or onto "today"/"tomorrow" was guesswork,
+and it guessed wrong — which reads to the caller as an appointment offered for nine o'clock this
+morning at ten to two in the afternoon.
+
+The platform had the answer all along. Every conversation carries these, unused until now:
+
+```
+system__time     = Tuesday, 13:52 15 September 2026
+system__timezone = Europe/Bucharest
+system__time_utc = 2026-09-15T10:52:53.278884+00:00
+```
+
+New prompt section `# The clock and the calendar` opens with `It is {{system__time}} in Romania.`
+and then: weekdays are worked out from that line; "today" only when the tool's ISO date IS that
+date and "tomorrow" only when it is the next day, otherwise drop the word and say the weekday and
+the date; the search always starts tomorrow so no returned slot is ever today; and no same-day
+booking — give the branch's direct number and offer to put the caller through while it is open.
+`# Call memory` now also forbids passing a past **time**, not just a past date.
+
+### 2. "Nem csak orvosok dolgoznak" — optometrists were being called doctors
+
+Reported by the client. The agent says *medici* / *orvosok* for everyone and prefixes every name
+with *doamna doctor*, although roughly half the providers are optometrists. It has always had the
+means to tell them apart and never used it: **every** entry in `results[]`, and `earliest`, carries
+`provider_type` (`doctor` | `optometrist`), derived in n8n from the calendar-name prefix
+(`Optometrist Bodi Ildiko` → optometrist).
+
+New prompt section `# Doctors and optometrists - not everyone here is a doctor`: read the
+`provider_type` field rather than the name, and title the person from it — doctor is
+*doamna/domnul doctor* / *doktornő, doktor úr* / *Dr.*; optometrist is *doamna optometristă,
+domnul optometrist* / *optometrista* / *optometrist*. Never "Dr." in front of an optometrist's
+name in any language. Speaking of the team in general: *medici oftalmologi și optometriști* /
+*szemorvosok és optometristák*, never *medici* or *orvosok* alone. The same titling rule went into
+the `evolvo_check_availability` description, where the data is actually read.
+
+Knowledge base: **§23** added to both FAQs, in the client's own wording — an optometrist is a
+*szemészeti szemvizsgálatot végző szakember*, a qualified specialist who carries out eye
+examinations, and is not a doctor. Retrieval verified: the Hungarian query *"Csak orvosok dolgoznak
+ott, vagy optometrista is végez szemvizsgálatot?"* matches §23 at rank 1, `vector_distance` 0.113.
+
+Related, and already forbidden but violated in `conv_2501m2jc42q2f7nrfz4ykhpwfsgd`: *"Aceștia sunt
+specialiști în boli și afecțiuni oculare"*. The unknowns list now reads "what anyone specialises
+in" rather than "doctors' specialisations", and the new section ends: never state that a named
+person is an ophthalmologist — their name and their `provider_type` are all you know.
+
+### 3. Tool-call sounds stopped playing
+
+All five evolvo tools have `tool_call_sound: "typing"`, so the sound looked configured. But
+`tool_call_sound_behavior` was `"auto"`, and **auto only plays the sound when there is pre-tool
+speech.** The latency work removed pre-tool speech — `pre_tool_speech: "off"` on
+`book_appointment`, `find_appointments` and `log_request`, plus a prompt rule against holding lines
+that suppresses it on the two tools still set to `"auto"`. Sound configured, condition never met,
+silence.
+
+Set `tool_call_sound_behavior: "always"` on all five. The sound now plays on every call regardless
+of whether the agent speaks first, which is what is wanted: it fills exactly the silence that
+turning pre-tool speech off created.
+
+### Also
+
+`language_detection.pre_tool_speech` was back at `"auto"` — the rewritten description from the
+previous session had survived but this setting had not. Restored to `"off"`.
+
+**Correction to the previous entry:** it flagged that the LLM had been changed in the UI to
+`qwen35-397b-a17b` while the repo docs said `gpt-5.6-luna`. Main currently reads **`gpt-5.6-luna`**,
+which is what the docs say, so that flag no longer stands and the docs need no change.
+
+The repo's knowledge-base mirrors were stale — they still held the pre-2026-09-14 text, without the
+§15 addresses and §16 landmarks folded in last session. Both rebuilt from the live documents and
+verified byte-exact against them (RO 10,852 B, HU 10,959 B) before §23 was added.
+
+**Prompt: 23,331 → 25,780 characters (+10.5 %).** Both new sections are load-bearing against a
+reported defect, but this is the first entry in three that adds rather than removes; a compression
+pass over the older sections is the obvious next thing if length matters more than these two rules.
+
 ## 2026-09-16 — system prompt slimmed: the procedures own the flows, the prompt owns the facts
 
 The prompt had grown into a second copy of the procedures. Three whole sections re-specified, less

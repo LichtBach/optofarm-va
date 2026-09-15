@@ -1,6 +1,7 @@
 # Optica Optofarm — szolgáltatási és ügyintézési tudnivalók (GYIK)
 
-Ez a dokumentum a telefonon leggyakrabban feltett gyakorlati kérdésekre adott, megerősített válaszokat tartalmazza. Használati szabály: csak az itt leírtakat mondd el, egy-két mondatban. Ne egészítsd ki, ne becsülj, ne általánosíts. Ami itt nincs leírva, arra a fő promptban szereplő, ismeretlen információra vonatkozó protokoll érvényes.
+Ez a dokumentum a telefonon leggyakrabban feltett gyakorlati kérdésekre adott, megerősített TÉNYEKET tartalmazza. Használati szabály: csak az itt leírtakat mondd el, egy-két mondatban. Ne egészítsd ki, ne becsülj, ne általánosíts. Ami itt nincs leírva, arra a fő promptban szereplő, ismeretlen információra vonatkozó protokoll érvényes.
+Ez a dokumentum NEM írja le, hogyan kell egy hívást levezetni. A sürgősségi esetek, az időpontfoglalás, a lemondás és az áthelyezés a fő promptban és az ügynök eljárásaiban van leírva — azokat kövesd, ne ezt a dokumentumot.
 
 ## 1. Küldőpapír (beutaló)
 
@@ -16,7 +17,7 @@ Ez gyakori kérdés. Mondd ki egyenesen, mentegetőzés nélkül.
 - Lencse ára: a legegyszerűbb lencse 220 lej, a többi lencse ennél drágább.
 - Szürkehályog-műtét: 3000 lej szemenként.
 
-Bármely más árra vonatkozó kérdésnél mondd, hogy az az információ nincs nálad, és ajánld fel a kollégához való kapcsolást. Teljes árlista egyelőre nem áll rendelkezésre. Ne becsülj és ne adj meg ártartományt.
+Bármely más árra vonatkozó kérdésnél mondd, hogy az az információ nincs nálad, és vedd fel a visszahívási kérést. Teljes árlista egyelőre nem áll rendelkezésre. Ne becsülj és ne adj meg ártartományt.
 
 ## 3. Mennyi ideig tart a vizsgálat
 
@@ -31,7 +32,7 @@ Egy szemvizsgálat körülbelül 20 percet vesz igénybe, attól függően, pont
 ## 5. Mikor lesz kész a szemüveg
 
 A kollégák minden esetben telefonon értesítik a pácienst, amint a szemüveg elkészült.
-Egy már leadott rendelés állapotát nem látod. Ilyenkor kapcsold a kollégához, vagy vedd fel a visszahívási kérést.
+Egy már leadott rendelés állapotát nem látod. Ilyenkor vedd fel a visszahívási kérést.
 
 ## 6. Nem lát jól az új szemüvegével
 
@@ -58,53 +59,84 @@ Javítást vállalunk. Kérd meg, hogy hozza be a szemüveget az egységbe, ahol
 ## 11. Új clips és szár rendelése
 
 A kerettől függően van lehetőség új clipset vagy új szárat rendelni, ha a javítás nem megoldható.
-Azt, hogy az adott keretnél ez megoldható-e, csak az egységben dolgozó kolléga tudja megmondani — ajánld fel a kapcsolást.
+Azt, hogy az adott keretnél ez megoldható-e, csak az egységben dolgozó kolléga tudja megmondani — vedd fel a visszahívási kérést.
 
 ## 12. Keret behozatala aznapi elkészítéshez
 
 - Posta utca: a keretet legkésőbb zárás előtt két órával kell behozni, ha még aznap el szeretné vinni a szemüveget.
 - Republicii (Szentgyörgytér): a keretet délután kettőig kell behozni, mert az optikus négyig dolgozik ott.
-- Bármely más egységnél nem ismered a határidőt — ajánld fel a kapcsolást.
+- Bármely más egységnél nem ismered a határidőt — vedd fel a visszahívási kérést.
 
 ## 13. Vitamin és egyéb készlet
 
 Azt, hogy megérkezett-e a vitamin vagy bármilyen más termék egy egységbe, csak az ott dolgozó kolléga látja.
-Soha ne mondd, hogy megérkezett vagy nem érkezett meg. Kapcsold a kollégához, vagy vedd fel a visszahívási kérést.
+Soha ne mondd, hogy megérkezett vagy nem érkezett meg. Vedd fel a visszahívási kérést.
 
 ## 14. Szürkehályog-műtét
 
 - Végzünk szürkehályog-műtétet, fakoemulzifikációval.
 - Ára: 3000 lej szemenként.
-- A műtéti időpont egyeztetése a Bulevard egységben történik — add meg annak az egységnek a telefonszámát, vagy kapcsold oda.
-- A műtéttel kapcsolatos minden más kérdés (alkalmasság, várakozási idő, gyógyulás) ismeretlen — ajánld fel a kapcsolást.
+- A műtéti időpont egyeztetése a Bulevard egységben történik — add meg annak az egységnek a telefonszámát.
+- A műtéttel kapcsolatos minden más kérdés (alkalmasság, várakozási idő, gyógyulás) ismeretlen — vedd fel a visszahívási kérést.
 
-## 15. Sürgősségi eset
+## 15. Címek, nyitvatartás és telefonszámok — mind a nyolc egység
 
-Sürgős szemészeti panasz esetén — idegen test a szemben, szemfájdalom és hasonlók — ajánld fel a leghamarabbi időpontot az orvoshoz. Ha addig nem tud várni, mondd, hogy menjen el a sürgősségire.
-Soha ne mondd, hogy hívja a 112-őt. Arra nincs szükség, és ne is említsd a számot.
-Ha az egység nyitva van, jobb megoldás átkapcsolni a hívást, hogy a kolléga manuálisan be tudja illeszteni a programáltak közé.
+Ezek az egyetlen megerősített címek, nyitvatartási idők és telefonszámok. Innen olvasd fel, soha ne emlékezetből, és a címet a nyitvatartással együtt add meg.
+A cégnek nyolc egysége van: hat Marosvásárhelyen, egy Szászrégenben és egy Szovátán, és körülbelül hetven alkalmazottja. Vasárnap minden egység zárva van. Általános e-mail: jeremias@optica-optofarm.ro
 
-## 16. Sürgős időpontkérés
+- Posta utca / Poștei — Marosvásárhely, Posta utca 3 (Strada Poștei nr. 3): hétfő–péntek 08:00–21:00, szombat 09:00–14:00. Telefon: +40 265 212 304. Ez az EGYETLEN egység, amely szombaton nyitva van, és az egyetlen, amely 21:00-ig tart nyitva.
+- Rózsák tere / Trandafirilor — Marosvásárhely, Rózsák tere 53 (Piața Trandafirilor nr. 53): hétfő–péntek 08:00–20:00, szombaton és vasárnap zárva. Telefon: +40 265 250 120.
+- Szentgyörgytér / Republicii — Marosvásárhely, Strada Republicii nr. 5: hétfő–péntek 08:00–20:00, szombaton és vasárnap zárva. Telefon: +40 365 430 939.
+- Bulevard — Marosvásárhely, Bulevardul 1 Decembrie 1918 nr. 49: hétfő–péntek 08:00–20:00, szombaton és vasárnap zárva. Telefon: +40 265 263 351.
+- Fortuna — Marosvásárhely, Bulevardul 1 Decembrie 1918 nr. 182-184: hétfő–péntek 08:00–20:00, szombaton és vasárnap zárva. Telefon: +40 265 265 205.
+- Dózsa György utca / Doja — Marosvásárhely, Dózsa György utca 64-68 (Strada Gheorghe Doja nr. 64-68): hétfő–péntek 08:00–20:00, szombaton és vasárnap zárva. Telefon: +40 265 212 212.
+- Szászrégen / Reghin — Szászrégen, Iskola utca 11 (Strada Școlii nr. 11): hétfő–péntek 08:00–18:00, szombaton és vasárnap zárva. Telefon: +40 265 512 042.
+- Szováta / Sovata — Szováta, Fő utca 196 (Strada Principală nr. 196): hétfő–péntek 08:00–20:00, szombaton és vasárnap zárva. Telefon: +40 265 577 282.
 
-Ha az időpont azért sürgős, mert a páciens elutazik, vagy más nyomós oka van, ne csak rögzítsd a kérést: kapcsold az adott egységhez, ahol a kolléga meg tudja próbálni manuálisan beilleszteni, vagy add meg az egység közvetlen telefonszámát.
+## 16. Útbaigazítás — megerősített tereptárgyak mind a nyolc egységhez
 
-## 17. Időpont kérése, lemondása, áthelyezése
+Ha a hívó nem tudja, hová kell mennie, adj meg egy vagy két tereptárgyat az alábbi listából — ne útvonalat és ne az egész sort. A tulajdonnevek pontosan úgy maradnak, ahogy itt szerepelnek — Kaufland, Flanco, BRD, BCR, Orange, Petrom, Penny, Elixon, Kimikálé, Poli 2, Bernády, Avram Iancu, Casa de Modă — és csak a körülöttük lévő szavakat fordítod. Soha ne találj ki tereptárgyat, buszjáratot vagy parkolási lehetőséget ezen a listán kívül.
 
-Nem látod a naptárat, ezért soha ne mondd, hogy egy időpont szabad, és soha ne erősíts meg időpontot lefoglaltként. Csak kérést veszel fel, amit a kolléga visszahívással véglegesít.
+- Trandafirilor — Rózsák tere 53 / Piața Trandafirilor 53: a Divatház (Casa de Modă) mellett, a színházzal szemben, az Avram Iancu-szoborral egy vonalban, a katolikus templomtól lefelé.
+- Fortuna — 1 Decembrie 1918 nr. 182-184: a Tudor negyedben, a BRD-vel szemben, a BCR bank és az Orange üzlet között, közvetlenül a buszmegállónál.
+- Doja — Dózsa György utca 64-68 / Strada Gheorghe Doja 64-68: a Kaufland parkolójában, a Flanco mellett. Könnyű ott parkolni.
+- Republicii — Szentgyörgytér / Piața Republicii 5: a November 7. felé levő, Petrom benzinkúttól szemben álló sárga épület.
+- Postei — Posta utca 3 / Strada Poștei 3: a központban, a Bernády-szobor melletti szűk mellékutcában, a Postával szomszédos épületben, a volt bábszínházzal szemben.
+- Bulevard — 1 Decembrie 1918 nr. 49: a Hosszú utca / Strada Lungă elején, a Poli 2 felől a Tudor negyed felé, a BCR közelében. Van egy parkoló, ahová be lehet állni autóval.
+- Reghin — Iskola utca 11 / Strada Școlii 11: a Kimikálé mellett.
+- Sovata — Fő utca 196 / Strada Principală 196: a Penny mellett, a körforgalomnál, az Elixonnal szemben.
 
-Új időpontkérésnél tisztázd, mire szeretné programálni magát: szemüvegkészítés, OCT, kontroll, szemnyomásmérés vagy egyéb probléma. Ezt mindig kérdezd meg, ne feltételezd.
+## 17. Gyerekek
 
-Ha a páciensnek nincs preferenciája az orvos szempontjából, ne erőltesd a választást — rögzítsd, hogy a leghamarabbi szabad időpontot kéri.
+Igen, foglalkozunk gyerekekkel: életkornak megfelelő szűrés, valamint programok a gyermekkori miópia lassítására és a tompánlátás (amblyopia, „lusta szem”) és a kancsalság kezelésére.
+A lusta szem azt jelenti, hogy az egyik szem látása gyermekkorban nem fejlődött ki teljesen. A kancsalság azt jelenti, hogy a szemek nem állnak egy irányba.
+Csak ezeket az egymondatos meghatározásokat add meg. Ne magyarázd az okát, a súlyosságát vagy a várható kimenetelét, és ne ajánlj kezelést, cseppet vagy vitamint — ehhez orvos kell.
 
-Meglévő időpont lemondása és meglévő időpont áthelyezése ugyanígy működik: vedd fel a nevet, az egységet és a telefonszámot, áthelyezésnél azt is, hogy körülbelül mikor lenne megfelelő, majd mondd, hogy a kolléga visszahívja. Soha ne mondd, hogy az időpontot lemondtad vagy áthelyezted.
+## 18. Szolgáltatások
 
-## 18. Nyitvatartás és címek
+Teljes szemvizsgálat, szemüveg- és kontaktlencse-recept, gyermek- és felnőttszűrés, valamint többféle szakvizsgálat. Kérdezd meg, melyikre van szüksége a hívónak.
+Egy konkrét vizsgálatnál add meg az egymondatos, egyszerű leírást a fogalomtárból, és állj meg. Ne magyarázd, mit jelentenének az eredmények, hogy szüksége van-e rá, vagy hogyan készüljön.
 
-A nyitvatartási időt és a címeket a tudásbázisból add meg, ne emlékezetből. A weboldal munkapontokat bemutató oldala tartalmazza mindegyik egység nyitvatartását.
-Szombaton csak a Posta utcai egység van nyitva, kilenctől kettőig. A többi egység szombaton és vasárnap zárva van.
+## 19. Lencsegyár
 
-## 19. Útbaigazítás
+A cégnek saját lencsegyára van, és bármilyen speciális lencsét elő tud állítani: egyfókuszú, bifokális, progresszív, irodai, fényre sötétedő és digitális védelmet nyújtó lencsét, tükröződésmentes, víz- és zsírtaszító, antisztatikus és karcálló bevonatokkal.
 
-Ha a hívó nem tudja, hová kell mennie, tereptárgyat adj meg, ne útvonalat.
-Republicii utca 5. — magyarul Szentgyörgytér: a November 7. felé lévő, Petrommal szemben álló sárga épület.
-Más egységnél add meg az utcát és házszámot, tereptárgyat pedig csak akkor, ha a tudásbázisban szerepel. Soha ne találj ki tereptárgyat, buszjáratot vagy parkolási lehetőséget.
+## 20. B2B, nagyker és partnerség
+
+A cég közvetlenül a gyárból szállít optikáknak és klinikáknak, és országszerte terjeszt.
+A lencsegyár, a B2B és a nagykereskedelem elérhetősége: telefon +40 771 048 936, e-mail ofalentile@gmail.com. Ezt a számot és e-mail-címet CSAK B2B, nagykereskedelmi vagy gyári megkeresésre add meg, soha nem egy időpontot kérő páciensnek. Ajánld fel a kérés rögzítését is.
+
+## 21. A cég alapítása
+
+A céget 1991-ben alapították.
+
+## 22. Lézeres látáskorrekció
+
+Nem tudod, hogy végeznek-e ilyet. Ne feltételezd, hogy igen, és ne feltételezd, hogy nem — kezeld ismeretlen információként.
+
+## 23. Ki végzi a vizsgálatokat — nem csak orvosok dolgoznak itt
+
+Az Optofarmnál a vizsgálatokat szemorvosok és optometristák egyaránt végzik. Az optometrista szemészeti szemvizsgálatot végző szakember — például új szemüveghez vagy dioptriaellenőrzéshez.
+Az optometrista NEM orvos: soha ne szólítsd „doktornőnek” vagy „doktor úrnak”, és soha ne tedd a neve elé, hogy „Dr.”. Őt „optometristának” nevezed.
+Ha általánosságban beszélsz arról, kik dolgoznak itt, azt mondd, hogy „szemorvosok és optometristák”, soha ne csak azt, hogy „orvosok” — az a kollégák felét kihagyná.
+Azt, hogy egy egységben pontosan ki dolgozik, és orvos-e vagy optometrista, csak az időpontfoglaló rendszerből tudod meg, soha nem emlékezetből. Ne mondd meg, ki mire szakosodott.
