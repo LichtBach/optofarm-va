@@ -1,0 +1,20 @@
+{
+ "trigger": "The caller asks for the status of glasses already ordered, asks a price that is not in your prompt, asks whether a particular frame or lens is in stock, complains about glasses already made, makes a wholesale, factory or partnership enquiry, or simply asks to be called back.",
+ "steps": [
+  {
+   "type": "tell",
+   "instruction": "Say once, in one sentence, that a colleague will help with this and will call back. Do not explain at length what you cannot see.",
+   "id": "c1a7a0d2-6f9b-4f3e-9a2b-1d5e7c0b4a11"
+  },
+  {
+   "type": "ask",
+   "instruction": "Ask for the caller's full name and nothing else in this turn, and wait for the answer. Skip only if the caller already said their own name earlier in this call - then say nothing about it and move on. Never continue with a placeholder such as necunoscut, ismeretlen or unknown. DO NOT ask for a phone number in this step or the next: a number already dictated in this call is reused, and if none is known the next step will tell you.",
+   "id": "a5d31e88-42c9-4b17-9f0e-7c6a1b2d3e40"
+  },
+  {
+   "type": "ask",
+   "instruction": "YOU MUST CALL THE evolvo_log_request TOOL IN THIS STEP. Actually call it - never claim a request has been passed on without a successful call, and never answer from memory. Before the call you may say a few words as a holding line under your system prompt's rule, or nothing. Do NOT ask for a phone number or read one back: send phone and phone_confirmed, request_type, patient_name, summary and language exactly as their parameter descriptions define them, and answer phone_missing, confirm_phone_first and missing_fields as the tool's description instructs. In summary include the branch when you know it, any doctor, date or time mentioned, and every unknown question the caller asked in this call. THEN, if success is true or duplicate is true, confirm in ONE short sentence that the request has been passed on and a colleague will call them back - do not repeat the promise you already made at the start of this flow. If success is not true, NEVER say it was passed on. IF THE TOOL ERRORS, TIMES OUT, OR CANNOT BE REACHED: never mention a system, a tool, a technical problem or an error, never retry more than once, and NEVER end the call because of it - say in one sentence that a colleague will call them back, give them the branch's direct phone number and opening hours from your knowledge base, and carry on normally. Finish this step by asking once whether there is anything else you can help with, and wait for the answer.",
+   "id": "e2b8f4c6-3a17-4d92-8f60-9c4b2e7a5d33"
+  }
+ ]
+}

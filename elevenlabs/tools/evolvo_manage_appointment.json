@@ -1,0 +1,45 @@
+{
+  "name": "evolvo_manage_appointment",
+  "description": "Cancel, confirm, or mark for rescheduling one existing appointment. Always call evolvo_find_appointments first and act on the ref the caller confirmed; the name is not used. Precondition: you named that one appointment (person, weekday, date, time), asked if it is the one they mean, ended your turn, and the caller said yes - only then send appointment_confirmed true. confirm_appointment_first: nothing changed - read read_back back in the caller's language, ask if it is the right one, end your turn, then call again with the same ref and appointment_confirmed true. ambiguous_appointment or ref_date_mismatch: nothing changed - ask which they mean and call again with that line's ref and date. Cancelling has no undo, so never cancel an unconfirmed one; a cancelled appointment stops appearing in evolvo_find_appointments. A successful cancel reports slot_released (boolean), slot_release_status and a note already written for the caller. slot_released true: the time is bookable again - if they want it back, or for someone else, look it up with evolvo_check_availability and book normally. slot_released false (still_blocked, unknown, not_checkable_same_day or check_failed): never say the time is free or offer to rebook it; say the appointment is cancelled and offer to look for another time. Say cancelled, never deleted or removed. Moving: mark first, then book - call with action reschedule and only after it succeeds run evolvo_check_availability and evolvo_book_appointment for the new time, in this same call, on the same phone number. The booking cancels this appointment automatically and returns replaced_appointment, so never call this tool again to cancel it. Booking before marking leaves the old slot blocked; a different phone number leaves the marked appointment alone. If no new time is accepted it stays marked and a colleague picks it up; do not cancel it as a tidy-up. not_found or appointment_not_found: say a colleague will call back; do not guess. Never call it twice for the same appointment.",
+  "parameters": {
+    "phone": {
+      "type": "string",
+      "description": "The same number used for evolvo_find_appointments, digits only, no spaces, no leading zero or country code added or removed.",
+      "enum": null
+    },
+    "ref": {
+      "type": "string",
+      "description": "The ref of the one confirmed appointment, copied exactly from the evolvo_find_appointments list. Never invent one or reuse one from an earlier call.",
+      "enum": null
+    },
+    "date": {
+      "type": "string",
+      "description": "Date of that same appointment, YYYY-MM-DD, from the same line as the ref. Cross-checked: if they disagree nothing is changed.",
+      "enum": null
+    },
+    "action": {
+      "type": "string",
+      "description": "cancel drops it; slot_released in the response then says whether the time is bookable again. reschedule marks it as needing a new time without releasing the slot; booking a replacement on the same phone number cancels it automatically. confirm confirms attendance.",
+      "enum": [
+        "cancel",
+        "reschedule",
+        "confirm"
+      ]
+    },
+    "appointment_confirmed": {
+      "type": "boolean",
+      "description": "true only if you named this exact appointment (person, weekday, date, time), asked if it is the one they mean, and the caller answered yes in a later turn; otherwise false. Never guess: there is no undo.",
+      "enum": null
+    },
+    "note": {
+      "type": "string",
+      "description": "Optional short note for staff, e.g. the reason or when the caller would prefer instead.",
+      "enum": null
+    },
+    "conversation_id": {
+      "type": "string",
+      "description": "",
+      "enum": null
+    }
+  }
+}

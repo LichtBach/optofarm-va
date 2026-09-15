@@ -4,6 +4,92 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-15 (evening, 6) — tool descriptions and built-in tool descriptions shortened; procedures audited
+
+Two parallel read-only audits (tools, procedures), then the tool-side cuts applied. Live Main is now
+version `agtvrsn_0901m2jv51v9e60vv4v3w1nkw05a`; the LLM field read `gpt-5.6-luna` at write time
+(switched in the UI since the previous entry).
+
+### What the audits found
+
+The five `evolvo_*` tools had grown to **25,119 chars (~6,600 tokens)** of description and parameter
+text — 2.5× the 10,163 chars recorded in `prompt-optimization.md`, because provider_type,
+slot_released, replaced_appointment, needs_reschedule and the phone-reuse mechanics were all added
+since. That made the tool text larger than the compressed system prompt. All four built-in tools carry
+custom descriptions (2,645 chars). The three procedures total **40,096 chars** (booking 19,767,
+cancel_or_reschedule 16,368, escalate_to_human 3,961), but only the current step's instruction plus
+its outgoing conditions sits in context per turn — the biggest single steps are availability (4,426)
+and reschedule (5,718).
+
+### Applied — tools (workspace objects, so this also reaches `New - Optofarm` and the
+`latency-step-merge` branch; `agents_get_tool_dependents` checked first)
+
+| tool | before | after |
+|---|---|---|
+| evolvo_check_availability | 8,979 | 4,638 |
+| evolvo_book_appointment | 5,892 | 3,388 |
+| evolvo_find_appointments | 2,196 | 1,404 |
+| evolvo_manage_appointment | 4,619 | 2,974 |
+| evolvo_log_request | 3,433 | 2,440 |
+| **evolvo total** | **25,119** | **14,844 (−41%)** |
+| language_detection (built-in) | 1,092 | 442 |
+| transfer_to_number (built-in) | 931 | 584 |
+| end_call (built-in) | 469 | 308 |
+| skip_turn (built-in) | 153 | 153 |
+
+Cut classes: per-language phrasing (title forms, RO/HU keyword lists, placeholder words); rules the
+system prompt already carries (date_spoken/relative_day teaching, reminder-not-confirmation,
+cancelled-not-deleted, no colleague callback on success, phone digits rules, "names come through the
+phone mangled"); rationale and all-caps emphasis; repetition within and across tools. Kept in full:
+every precondition flag (`slot_accepted`, `phone_confirmed`, `appointment_confirmed`), every
+recovery path (`offer_slot_first`, `confirm_phone_first`, `confirm_appointment_first`), every error
+code and its handling, `booking_mode`, `replaced_appointment`, `slot_released` semantics, the
+mark-then-book order, `needs_reschedule`, the phone-reuse rule on `evolvo_log_request`, all seven
+`request_type` meanings, the `doctor` name-only / Ifj.-stripping rule (not in the prompt, so it must
+live here), and the `"Aici asistentul virtual Optofarm."` prefix rule on `transfer_to_number` (lives
+nowhere else). Deliberately kept beyond the audit's proposal: the two classification examples
+`'un control' / 'kontroll'` → doctor and `'control de dioptrii' / 'dioptriaellenorzes'` →
+optometrist on `provider_type` — those are input-interpretation cues, not output phrasing, and the
+ambiguous "control" is the most plausible behaviour change otherwise.
+
+One contradiction resolved: the old check_availability description said never call it to find out
+who works at a branch; the prompt says do (name at most three). The tool clause was dropped so both
+agree with the prompt. The unverified "top-level `today` field" mention was dropped (the prompt says
+use `{{system__time}}`).
+
+Mirror: `elevenlabs/tools/*.json` (description + parameter descriptions per tool;
+`built_in_tools.json` for the four built-ins).
+
+Operational note: `agents_update` with a partial `built_in_tools` block is rejected
+(`Field required: end_call.name`) — the built-in tools object is validated whole, so send all four
+complete objects, `params.transfers` included. Deep merge does not apply inside it.
+
+### Not applied — procedures (report only)
+
+Proposals are in `elevenlabs/procedures/proposals/` (`*.before.json` = live text decoded from the
+API `content`; `*.after.tier1.json` = recommended cut, same step ids and structure, instruction text
+only; `*.after.tier2.json` = also delegates tool mechanics to the tool descriptions; `counts.txt`).
+
+Per-procedure: booking 19,767 → 12,658 (tier 1, −36%) → 11,135; cancel_or_reschedule 16,368 → 10,780
+(−34%) → 9,156; escalate_to_human 3,961 → 2,794 (−30%) → 2,271. Cut classes as for the prompt: RO/HU
+example sentences (the four-option "what is the visit for" question, name/phone/read-back lines, slot
+offer examples, two-appointment listing), rules already in the prompt, rationale, and ~60% of the
+availability step which is a copy of the evolvo_check_availability description.
+
+Why not applied now: procedures need a draft → compile → publish cycle and the transition conditions
+are LLM judgements on the step text, so premature exits from the gather and availability steps are
+the risk to watch in test calls. Two things the audit found that need fixing regardless:
+
+1. **Dangling reference, introduced by the prompt compression.** The book step and the reschedule
+   step both say "add the reminder sentence exactly as your system prompt gives it for this
+   language" — the compressed prompt no longer has per-language reminder sentences. Tier 1 rewrites
+   it to "say in one short sentence that a reminder will be sent before the appointment".
+2. `elevenlabs/booking-procedure.after.json` (17,083 bytes) is not what is live — Main's booking
+   procedure is 21,019 bytes; the earlier 22,253 → 16,361 optimisation has partly regrown.
+
+Regression on the tool cuts: suite `suite_3601m2jv5fwhfdys8h8ahk5b3g92`, four tests × 5, on
+`gpt-5.6-luna`. **20/20** — Dates 5/5, RO→HU gate 5/5, caller-opens-in-Hungarian gate 5/5, no second greeting 5/5. Same score as before the cuts. One observation, not a failure: every Luna output in this run shows stray mid-word spacing in the transcript (`Cea mai apropi ată`, `mâ ine`, `do amna doctor Il ovan Anca`), as the nano run did; the flash-lite run earlier tonight was clean. Whether that reaches TTS is untested — listen to one real Luna call before trusting it.
+
 ## 2026-09-15 (evening, 5) — system prompt compressed 29,902 → 19,738 chars
 
 Motivation: a live call on `gpt-5.6-luna` showed ~14,100 cached input tokens per LLM turn, and the
