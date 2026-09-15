@@ -4,6 +4,63 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-16 — system prompt slimmed: the procedures own the flows, the prompt owns the facts
+
+The prompt had grown into a second copy of the procedures. Three whole sections re-specified, less
+precisely, what the procedures already handle step by step — so the model read one version of the
+booking flow in its system prompt and a more detailed, more current version again when the procedure
+opened. Removed:
+
+| Section | Size | Now owned by |
+|---|---|---|
+| `# Appointment flow` | 2,397 ch | `booking` procedure |
+| `## Cancelling or changing an appointment` | 2,177 ch | `cancel_or_reschedule` procedure |
+| `# Escalation flow` | 1,249 ch | `escalate_to_human` procedure |
+| `# Decision logic` | 863 ch | the procedure triggers themselves |
+
+**29,633 → 24,436 characters, −17.5 %.**
+
+### What replaced them
+
+One short section, `# What you can do, and how the work is organised`, which states the division of
+labour outright — *"This prompt holds who you are, how you speak, and the facts you know. The
+step-by-step handling of each job lives in your procedures"* — and then lists the four things the
+agent can do for a caller. That list is the point: a caller asking *"can you book me in?"* or *"can
+you tell me if my glasses are ready?"* is answered from the prompt, plainly, **without a procedure
+loading to answer a question about capability.**
+
+### What had to be kept, and was checked individually
+
+The procedures reference the prompt by name in five places. Each target was verified present in the
+new text before sending:
+
+- **`## The phone read-back gate`** — both `booking` and `cancel_or_reschedule` say *"apply the phone
+  read-back gate exactly as your system prompt defines it"*.
+- **`## Branch names — normalize with this table everywhere`** — the booking intake step normalises
+  against it.
+- **`## What the caller is told they will receive`** — the book step and the reschedule step both say
+  *"add the reminder sentence exactly as your system prompt gives it for this language"*.
+- **Both reminder strings verbatim**, Romanian and Hungarian. Cutting or paraphrasing either would
+  have silently broken the one sentence every successful booking ends on.
+
+Rules that lived *inside* the removed sections were not dropped — they moved to where they belong:
+
+- *never tell a caller a colleague will ring them back about a booking that succeeded* → **Guardrails**
+- *never invent a branch the caller did not name* → folded into the existing "never invent" guardrail
+- *a cancelled appointment is recorded as cancelled, never say deleted or removed* → **Guardrails**
+- *Târgu Mureș has six branches, so the city alone is not enough to look up a time* → **Locations**,
+  where the branch facts already are
+- the booking form on the website, and the rescheduling fallback → the new capability section
+
+`# Step 0 — Medical urgency` was compressed from 2,043 to about 1,400 characters but deliberately
+**not** delegated to the booking procedure, even though that procedure has its own emergency branch.
+Step 0 has to fire anywhere in a call — mid-cancellation, mid-question — not only once a booking is
+under way.
+
+Nothing else moved: `pre_tool_speech` stays auto on availability and manage, off on the other three;
+`speculative_turn` false; soft timeout -1. Verified byte-for-byte against the intended text apart from
+one trailing newline.
+
 ## 2026-09-15 (late night, 3) — `pre_tool_speech: auto` on the two tools the caller actually waits on
 
 Client request: put `pre_tool_speech` back to **`auto`** on `evolvo_check_availability` and
