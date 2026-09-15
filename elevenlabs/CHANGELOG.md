@@ -771,3 +771,59 @@ as-is would regress the reschedule handling. Port these edits first, or re-branc
 See [`../ELEVENLABS_AGENT_STATUS.md`](../ELEVENLABS_AGENT_STATUS.md) for the round-by-round history,
 and [`booking-procedure-optimisation.md`](booking-procedure-optimisation.md) for the 2026-09-12
 token reduction on `latency-step-merge`.
+
+## 2026-09-15 — greeting latency, language/voice switching, prompt↔KB de-duplication
+
+### Greeting latency (root cause found)
+The Romanian `first_message` was 254 characters ≈ **15.3 s of audio**. A caller who
+speaks during it is not answered until it finishes. In `conv_0001m2jdfs1sftq9mw6nm63kjk27`
+the caller said "Hello?" at t=5 s and was answered at t=17 s:
+`convai_turn_silence_before_initiation: 10.4 s` — which is exactly the remaining tail of
+the greeting. The LLM itself was fast (`convai_llm_service_ttfb: 0.73 s`).
+Greeting cut to 134 chars ≈ 8.1 s. Dropped the "Puteți vorbi cu mine în Română, Maghiară
+sau Engleză" menu (−3.2 s); kept the recording + consent clause.
+Added a `A GREETING IS NOT A TASK` rule: a bare greeting gets one short line, no lookup,
+no tool, no procedure.
+
+Residual on a bare "Hi.": `silence_before_initiation 2.72 s`, `ttf_audio 5.22 s`.
+That floor is turn detection (`turn_eagerness: normal`), not the prompt. Not changed —
+making it eager risks cutting off callers dictating phone numbers.
+
+### Accent / voice
+- Base voice `Dme3o25EiC1DfrBQd73f` is **"Aggie", a Hungarian voice** — used for Romanian
+  and English alike. Kept on the user's instruction.
+- `en` preset voice `vChnJZ1Cu89g2XXumPfT` is **"Lara", en-american** — correct and live on
+  Main, but `tts_usage.per_voice_usage` shows **zero seconds** from it in both test calls,
+  including `conv_5801m2jd7agwemy9qttvxt7b4m87` where `language_detection` returned
+  `{"language":"en","status":"success"}` and every later turn was English.
+- `conv_0001…` switched to English **without calling `language_detection` at all**
+  (`features_usage.language_detection.used: false`). Prompt now states that the tool call is
+  the only thing that changes the voice and must fire *before* replying in a new language;
+  tool description hardened; `pre_tool_speech` set to `off` so the switch is silent.
+
+### Prompt ↔ knowledge base de-duplication
+Both FAQ docs contained call-handling instructions already owned by the prompt and the
+procedures — and both told the agent to say the **clinic would confirm the appointment**:
+- RO: *"Dacă răspunsul este că cererea a fost înregistrată și urmează confirmarea clinicii, spune exact asta."*
+- HU: *"Ha a válasz az, hogy a kérés rögzítésre került és a klinika megerősíti, pontosan ezt mondd."*
+
+That is the defect reported earlier as *"Clinica vă va confirma programarea"*, still live in
+RAG, and it also breaks the guardrail against calling Optofarm a clinic. Removed from both,
+along with the duplicated emergency and booking/cancellation sections.
+Branch landmarks moved **out of the prompt into both FAQ docs**, resolving a contradiction:
+the KB said *"un reper doar dacă se află în baza de cunoștințe"* while the prompt listed
+landmarks for all eight branches.
+
+| | before | after |
+|---|---|---|
+| system prompt | 29,633 ch | 23,331 ch (−21.3 %) |
+| RO FAQ | 9,951 B | 8,455 B |
+| HU FAQ | 9,753 B | 8,407 B |
+
+### Open
+- KB doc `MhVjolXAcypPXVvWoAVL` is a **folder** — the whole optica-optofarm.ro crawl. Its
+  cookie-policy and privacy-policy pages outranked the FAQ on a directions query. RAG
+  retrieves 6 chunks every turn and `used_chunk_ids` was `[]` on every turn inspected.
+- Website "Puncte de lucru" page says `Sâmbătă: închis` for every branch, contradicting the
+  prompt and both FAQ docs on Poștei being open 9–2.
+- LLM is now `qwen35-397b-a17b` (was `gpt-5.6-luna`); `agent_last_updated_from: "ui"`.
