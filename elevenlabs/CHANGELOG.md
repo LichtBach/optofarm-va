@@ -843,10 +843,18 @@ retrieved on every turn:
 | Contact, RO and HU | 2 | 3,306 | only the general e-mail; B2B number is on Fabrica de lentile |
 | Puncte de lucru, RO and HU | 2 | 10,658 | the only load-bearing data |
 
-Replaced with one authored bilingual document, `FUSHtAQki9sjGxN7tswc`
-(~2.9 KB): eight branches with address in both languages, weekday and Saturday
-hours, direct phone number, plus the B2B/lens-factory contact.
-**101,242 B → ~2,900 B (−97%), 18 documents → 1.**
+Replaced by folding the branch data into the two FAQ documents that were already
+indexed: §15 now holds all eight branches with address, weekday and Saturday hours
+and direct phone number, and §20 holds the B2B/lens-factory contact. Each language's
+FAQ is therefore self-contained — §15 addresses, §16 landmarks — with no third
+document to keep in sync.
+**Knowledge base: 23 documents → 5. The crawl's 101,242 B is gone; the two FAQs grew
+by 1,497 B and 1,726 B to carry what was worth keeping.**
+
+A standalone bilingual locations document was created first (`FUSHtAQki9sjGxN7tswc`)
+but deleted again once the FAQ route was verified: keeping both would have put the
+same eight addresses in the retrieval pool twice, which is the duplication this work
+set out to remove.
 
 ### Correction to the earlier entry
 The claimed contradiction between the website and the FAQ over Saturday hours was
@@ -862,8 +870,17 @@ Before, a directions query returned the cookie-policy page at rank 1
 the same kind of query returns all six chunks from the two curated FAQ docs, with
 the landmark list at ranks 1 and 2, and no policy page at all.
 
-### Note
-A newly created knowledge-base document is not retrievable immediately — its RAG
-index is built asynchronously, and the MCP surface exposes no
-compute-rag-index call. Verify with `agents_query_knowledge_base_rag` before
-deleting anything the new document is meant to replace.
+### Verified after deletion
+- Romanian: "Ce număr de telefon are punctul de lucru de pe strada Poștei și la ce
+  oră se închide?" → FAQ §15, `vector_distance` 0.160.
+- Hungarian: "Mikor van nyitva a szentgyörgytéri üzlet és mi a telefonszáma? Hogyan
+  találok oda?" → GYIK §15, `vector_distance` 0.129, returning the correct branch
+  with hours and phone. That beats the best pre-cleanup match on any locations query,
+  which was the cookie-policy page at 0.130.
+
+### Gotcha for next time
+A newly created knowledge-base document is not retrievable for some minutes — its RAG
+index is built asynchronously and the MCP surface exposes no compute-rag-index call.
+Editing an existing, already-indexed document re-indexes it promptly. Always confirm
+with `agents_query_knowledge_base_rag` before deleting whatever the new content is
+meant to replace.
