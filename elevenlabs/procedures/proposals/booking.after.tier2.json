@@ -1,0 +1,98 @@
+{
+ "trigger": "The caller wants to make a new appointment, asks about coming in or about availability with intent to visit, or describes a non-emergency symptom or need that requires seeing a doctor. Do NOT start this procedure again if you are already arranging an appointment inside it: when the caller changes the day, the time, the doctor, the branch or the city mid-flow, that is the same booking continuing - stay in the flow you are already in and look the new request up there. If the caller describes an eye emergency, the first branch below handles it and transfers the call at once.",
+ "steps": [
+  {
+   "type": "branch",
+   "branches": [
+    {
+     "condition": {
+      "type": "llm",
+      "condition": "The caller described an emergency: a chemical or substance in the eye, a penetrating injury or something embedded in the eye, sudden loss of vision or suddenly not seeing well with one eye, sudden flashes with a dark curtain, severe eye pain with nausea or vomiting, or an impact injury."
+     },
+     "steps": [
+      {
+       "type": "ask",
+       "instruction": "Say one sentence in the caller's language: a doctor must see this at once, go now in person to an eye emergency service, and you are connecting them to a colleague; then call transfer_to_number in the same turn. Say nothing else, ask nothing, never mention 112, never look for an appointment. If the transfer is not possible, give the branch's direct phone number from your knowledge base and end the call.",
+       "id": "11435be6-1576-48b1-a2ed-d627e32b1b04"
+      }
+     ],
+     "id": "f25900f6-c2fe-4cd3-9ba0-3be087778482"
+    },
+    {
+     "condition": {
+      "type": "llm",
+      "condition": "The caller described an urgent but non-emergency eye problem - pain, something in the eye, a foreign body, discomfort - or said they must be seen at once or as soon as possible because of a problem."
+     },
+     "steps": [
+      {
+       "type": "tell",
+       "instruction": "Say once, in one or two sentences, that a doctor needs to look at this and you will look for the earliest possible appointment, and that if they cannot wait until then they can go to an eye emergency service in person. Do not diagnose, name a cause or suggest any treatment, and never mention 112.",
+       "id": "05040eb5-62ff-47c4-af16-bac67110653b"
+      }
+     ],
+     "id": "29cafc87-d7d1-4369-ba7e-dbe0404c006a"
+    }
+   ],
+   "id": "f0c850a3-78f8-4ac8-9e67-d278955e3d27"
+  },
+  {
+   "type": "ask",
+   "instruction": "Collect everything here, before any tool runs: ONE question per turn, only what is still missing, in this order. (0) If the caller only said they have a problem with an eye without saying what, first ask warmly in one short sentence what is happening with the eye; if the answer is an emergency, say once that a doctor must see this immediately and to go now in person to an eye emergency service, call transfer_to_number at once and stop. (1) WHICH BRANCH, part of town or doctor - skip if already named; normalise it with the branch names in your system prompt. If they name only Târgu Mureș or Marosvásárhely, offer three branches (Poștei, Trandafirilor, Doja) and ask which, without calling a tool. (2) What the visit is for - skip if they already said it in any words (glasses, a check-up, OCT, eye pressure, or any described problem or symptom); otherwise ask whether it is for glasses, an OCT scan, a check-up or eye pressure measurement. If they ask what one of these is, answer in one plain sentence from your knowledge base, then repeat the question once. This answer decides provider_type in the next step: glasses or dioptres means an optometrist, anything medical means a doctor; a bare 'check-up' counts as medical and needs no further question. (3) Whether they want a particular doctor or the earliest appointment - skip if they named a doctor, said any doctor, as soon as possible, whoever is free, or described a problem; otherwise ask. DO NOT LEAVE THIS STEP until you have BOTH a usable place (a named branch, a named doctor, or Reghin or Sovata; Târgu Mureș alone is not one) AND what the visit is for: while either is missing, your next turn is the question for it. Once both are known, go to the availability lookup without asking anything else.",
+   "id": "1940c682-1ddb-4463-8595-23432de18780"
+  },
+  {
+   "type": "ask",
+   "instruction": "YOU MUST CALL THE evolvo_check_availability TOOL IN THIS STEP. Actually call it - never state, guess or invent availability, a day, a time or a doctor's name. Call it once, with the place and the purpose already known from the step before; a further call is only for something the caller changes afterwards. Send doctor, location, city, date_from and provider_type exactly as the tool's description and parameter descriptions define them, never inventing a branch, city or doctor the caller did not say, and answer each error result as the description instructs. Offer ONE day with one or two times, said once. STAY IN THIS STEP FOR AS LONG AS THE CALLER IS STILL NEGOTIATING: a declined slot followed by another day, an earlier or later time, a different part of the day, doctor, branch or city is the SAME booking continuing - call evolvo_check_availability again from this step with the changed doctor, location, city, provider_type or date_from and offer what comes back. Do NOT leave this step, restart the procedure or hand the conversation back while the caller is still naming something new. Each call must differ from the previous one in at least one of those fields, and never call twice in a row without an answer from the caller in between. IF THE TOOL ERRORS, TIMES OUT, OR CANNOT BE REACHED (unlike no_match or too_many_matches, which are normal answers): never mention a system, a tool, a technical problem or an error, never say you cannot see the calendar, and NEVER end the call because of it - try once more, and if it fails again say in one sentence that a colleague will call back to fix a time and carry on. Finish this step by offering ONE slot (weekday and date, time, provider with the title provider_type gives, branch) and asking whether it suits, then wait for the answer.",
+   "id": "16e70eb9-54f1-4b3e-aefc-7bb3827de6e8"
+  },
+  {
+   "type": "branch",
+   "branches": [
+    {
+     "condition": {
+      "type": "llm",
+      "condition": "A slot was offered and the caller accepted a specific day and time."
+     },
+     "steps": [
+      {
+       "type": "ask",
+       "instruction": "Collect the caller's name and phone number and confirm the number, ONE question per turn, in this order. Do not call any tool in this step, and do not ask anything about the appointment itself here - what the visit is for was settled before the lookup. (1) NAME - ask for the caller's full name and nothing else in this turn, then wait. Skip only if the caller already said their own name in this call. If they ask why, say in one sentence that it is needed for the appointment. Never continue without a real name: never a placeholder such as necunoscut, ismeretlen or unknown, never an empty name. (2) NUMBER - then ask for the phone number and nothing else in that turn, and wait; do not read it back in the same turn. Skip only if the caller already dictated a number earlier in this call. (3) READ-BACK - apply the phone read-back gate from your system prompt and end your turn with the question whether it is right. This step is finished ONLY when the caller has answered that question; until then stay here and do nothing else. Skip the read-back only if you already read this exact number back and the caller confirmed it earlier in this call.",
+       "id": "4c456079-c98c-408a-8dc8-1b841844a137"
+      },
+      {
+       "type": "ask",
+       "instruction": "YOU MUST CALL THE evolvo_book_appointment TOOL IN THIS STEP. Actually call it - never tell a caller they are booked without a successful call. Call it straight after the caller has answered yes to the phone read-back, with no turns in between, with every parameter as its description defines it: the accepted slot's date, time, doctor and location exactly as the availability result spelled them (never ask the caller to choose a doctor now), problem as one short sentence of what the visit is for plus anything a colleague needs, slot_accepted true and phone_confirmed true. THEN say the result once, in one short sentence, exactly as the tool's description instructs for success, for booking_mode, for the reminder and for each error; never say it is booked unless success is true. IF THE TOOL ERRORS, TIMES OUT, OR CANNOT BE REACHED: never mention a system, a tool, a technical problem or an error, never say they are booked, never retry more than once, and NEVER end the call because of it - say in one sentence that a colleague will call back to fix the time and carry on. Finish this step by asking once whether there is anything else you can help with, and wait for the answer.",
+       "id": "44177395-5f83-4423-a94d-ac4566ef1aef"
+      }
+     ],
+     "id": "f923eee5-9f4e-4817-8c8f-77221e92303e"
+    },
+    {
+     "condition": {
+      "type": "llm",
+      "condition": "A genuine dead end, and nothing else. Choose this ONLY when ALL of these are true: the caller has already been offered at least two different slots, days, doctors or locations; they declined every one; and in their most recent answer they did NOT name any new day, time, doctor, branch or city and did not ask you to look again. A caller who declines and then proposes another day, an earlier or later time, another doctor, branch or city is STILL NEGOTIATING and belongs in the availability step, not here. Also choose this when the availability lookup itself errored or could not be reached twice in a row. Never choose this straight after a first missing_target, no_match, no_provider_of_type, doctor_not_at_location or too_many_matches result - first ask for or offer what that result tells you to, call evolvo_check_availability again and wait for the caller's answer."
+     },
+     "steps": [
+      {
+       "type": "tell",
+       "instruction": "Say once, in one sentence, that a colleague will call back to fix a time. Do not explain what you cannot see, and do not repeat this later in the call.",
+       "id": "2ea48a5b-c00e-43ab-a10d-59b79427d18f"
+      },
+      {
+       "type": "ask",
+       "instruction": "Collect the caller's name and phone number and confirm the number, ONE question per turn, in this order. Do not call any tool in this step. (1) NAME - ask for the caller's full name and nothing else in this turn, then wait. Skip only if the caller already said their own name in this call. If they ask why, say in one sentence that the colleague needs it to call them back. Never continue without a real name: never a placeholder such as necunoscut, ismeretlen or unknown, never an empty name. (2) NUMBER - then ask for the phone number and nothing else in that turn, and wait; do not read it back in the same turn. Skip only if the caller already dictated a number earlier in this call. (3) READ-BACK - apply the phone read-back gate from your system prompt and end your turn with the question whether it is right. This step is finished ONLY when the caller has answered that question; until then stay here and do nothing else. Skip the read-back only if you already read this exact number back and the caller confirmed it earlier in this call.",
+       "id": "2bc16ca9-486f-4e9f-8eea-b7ecc8581305"
+      },
+      {
+       "type": "ask",
+       "instruction": "YOU MUST CALL THE evolvo_log_request TOOL IN THIS STEP. Actually call it - never claim a request has been passed on without a successful call. Call it only after the caller has answered yes to the phone read-back, once, with request_type callback, patient_name set to the real name the caller gave, phone exactly as dictated and confirmed, language set to the language of this call, and summary as one or two plain sentences for a colleague in that language: that the caller wants an appointment, the doctor and branch they asked for, the date and time they wanted, and what the visit is for. THEN, if success is true or duplicate is true, say in one sentence that the request has been passed on and a colleague will call them back to fix a time. If success is not true, NEVER say it was passed on: answer the error as the tool's description instructs, ask for what it says is missing, wait, and call evolvo_log_request once more. IF THE TOOL ERRORS, TIMES OUT, OR CANNOT BE REACHED: never mention a system, a tool, a technical problem or an error, never retry more than once, and NEVER end the call because of it - give them the branch's direct phone number and opening hours from your knowledge base instead, and carry on. Finish this step by asking once whether there is anything else you can help with, and wait for the answer.",
+       "id": "2d2e998b-0ffe-483f-aab3-492fceed38d7"
+      }
+     ],
+     "id": "e400d7c3-01b2-483f-875b-a74006403f51"
+    }
+   ],
+   "id": "3092716f-c604-4648-a5ae-c41b70f076ec"
+  }
+ ]
+}

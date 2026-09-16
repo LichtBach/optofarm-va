@@ -1,0 +1,21 @@
+{
+  "name": "evolvo_find_appointments",
+  "description": "Look up the caller's appointments in the next 31 days by phone number only; never ask for a name. Precondition: you read the number back digit by digit and the caller answered yes in a later turn - send phone_confirmed true. confirm_phone_first: read the number in read_back back, ask if it is correct, end your turn, then call again with phone_confirmed true. found true returns count, persons[] and appointments[], each with ref (pass it to evolvo_manage_appointment), person, date YYYY-MM-DD, time HH:MM, doctor, location, type, state, kind (appointment or request_pending_staff_confirmation), manageable. state scheduled and confirmed are normal; needs_reschedule means a move was asked for but no new time booked - it still holds its slot, so if they want a new time go straight to evolvo_check_availability and evolvo_book_appointment on this phone number and do not mark it again. Cancelled ones are not returned. You may say these out loud: name one appointment back (person, weekday, date, time) and get an explicit yes before anything is changed. found false: ask whether it was booked with a different number; do not ask for a name.",
+  "parameters": {
+    "phone": {
+      "type": "string",
+      "description": "The number the appointment was made with, digits only as dictated, no spaces, no leading zero or country code added or removed.",
+      "enum": null
+    },
+    "phone_confirmed": {
+      "type": "boolean",
+      "description": "true only if you read this exact number back digit by digit and the caller answered yes in a later turn; otherwise false. Never guess.",
+      "enum": null
+    },
+    "conversation_id": {
+      "type": "string",
+      "description": "",
+      "enum": null
+    }
+  }
+}

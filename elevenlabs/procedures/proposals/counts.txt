@@ -1,0 +1,44 @@
+
+== booking ==
+type       id        before   tier1   tier2
+trigger                 578     578     578
+condition  f25900f6     287     287     287
+ask        11435be6     703     406     406
+condition  29cafc87     198     198     198
+tell       05040eb5     718     297     297
+ask        1940c682    3023    1768    1768
+ask        16e70eb9    4426    2574    1800
+condition  f923eee5      67      67      67
+ask        4c456079    1802    1150    1150
+ask        44177395    3386    1933    1184
+condition  e400d7c3     942     873     873
+tell       2ea48a5b     224     151     151
+ask        2bc16ca9    1669    1045    1045
+ask        2d2e998b    1744    1331    1331
+TOTAL                 19767   12658   11135   tier1 -36.0%  tier2 -43.7%
+
+== cancel_or_reschedule ==
+type       id        before   tier1   tier2
+trigger                 113     113     113
+ask        f5449c79     278     129     129
+ask        87a7694a     584     346     346
+ask        f125a0a3     796     436     436
+ask        12d03ae4    3258    1976    1976
+condition  5ec01932     143     143     143
+ask        35684fcf    2800    1839    1191
+condition  f5fddfd5     150     150     150
+ask        8a2347f0    5718    3697    2721
+condition  b50ccf55     156     156     156
+tell       4848e047     305     226     226
+ask        6a12b960     417     276     276
+ask        65a997bd    1650    1293    1293
+TOTAL                 16368   10780    9156   tier1 -34.1%  tier2 -44.1%
+
+== escalate_to_human ==
+type       id        before   tier1   tier2
+trigger                 275     275     275
+tell       c1a7a0d2     187     129     129
+ask        a5d31e88     675     433     433
+ask        e2b8f4c6    2824    1957    1434
+TOTAL                  3961    2794    2271   tier1 -29.5%  tier2 -42.7%
+ALL THREE: [40096, 26232, 22562]

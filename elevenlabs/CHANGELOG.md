@@ -4,6 +4,521 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-16 (evening) — "she does not work there": a matched doctor with no free slots
+
+Client report: callers ask for *"Ilovan dr nő"* and the agent answers that she does not work at
+Poștei, only "Ilovan Anica". Traced to `conv_0401m2mx22pveh5tkr6qy9fq3eat` (2026-09-16 13:44, Twilio,
+`qwen35-397b-a17b`).
+
+**The name handling was not the problem.** The caller said `Kilován doktornőhöz szeretnék a Posta
+utcába` — ASR heard *Kilován*, not Ilovan — and the agent sent `{doctor: "Kilován", location:
+"Postei"}`, correctly stripping both the title and the `-höz` case ending. n8n's fuzzy matcher
+resolved it to `Dr. Ilovan Anca` through one character of edit distance. Everything worked.
+
+What it returned was `available_days: []` — she has nothing free in the ~15 working days searched, so
+there is no `earliest` key either. **Nothing in the tool description covered that case.** The five
+documented outcomes are all error codes; a successful match with zero slots was undocumented, so the
+agent invented an explanation: that she does not work at that branch, and that the returned name
+belonged to someone else.
+
+### Applied to `evolvo_check_availability`
+
+Two sentences, plus a rewritten `doctor` parameter description:
+
+- an empty `available_days` means found-but-nothing-free: say so in one sentence, offer a later date
+  or another provider, **never say they do not work there**;
+- a name in `results[]` or `available_doctors` is the person the caller asked for, spelled as the
+  system stores it — use that spelling and never set it against what the caller said as though they
+  were two people;
+- `doctor`: the title-stripping rule now covers where the title actually sits. Romanian puts it in
+  front (`doamna doctor`), Hungarian puts it after the name and glues the case ending on
+  (`Ilovan doktornőhöz`, `Kovács doktor úrhoz`, `doktornőt`, `asszony`).
+
+Nothing added to the system prompt — it already forbids inventing who works at which branch, and the
+agent ignored that. The fix belongs where the result is read.
+
+### Raised with n8n (`n8n/REQUESTS_FROM_ELEVENLABS.md`, 2026-09-16)
+
+1. Make the empty case explicit — a `no_free_slots` flag and a leading `note`, rather than expecting
+   the model to notice an absent array. An empty array is a weak signal for an LLM.
+2. Latent only, not the cause here: `CA Match Calendars`'s list-based `STOP` catches `doktornő` but
+   not `dr nő`, `doktornőhöz`, `doktornőt` or `asszony`. Hungarian is agglutinative, so a word list
+   cannot cover it; a prefix regex would. Simulated against all 30 calendar names.
+3. Not n8n at all — **evolvo's calendar is named `Dr. Ilovan Anca` and the client says her name is
+   `Anica`.** `splitName` only splits on `" - "` and `CA Format Slots` passes `cal.doctor` through
+   untouched, so the agent speaks `Calendars[].name` verbatim. On 2026-09-15 a caller corrected it on
+   air (`conv_9601m2jaxsfje7eandzfxxpafbvt`) and the agent invented `Anika`. Rename it in evolvo;
+   `lev("anica","anca") = 1` so both spellings keep matching and no booking breaks.
+
+## 2026-09-16 (later) — vision_therapy routing and the diagnosis-first gate wired up
+
+n8n PR #5 added a third calendar kind (`vision_therapy`, the psycho-orthoptics calendar), a
+`specialty_booking_rule` block on `check_availability`, and a server-side `diagnosis_required` refusal
+on `book_appointment`. None of it was reachable from the agent: `provider_type` was a hard enum of
+`["doctor","optometrist"]`, and `book_appointment` had no `diagnosis_confirmed` parameter. Both fixed.
+
+| what | before | after |
+|---|---|---|
+| `evolvo_check_availability` `provider_type` enum | doctor, optometrist | + vision_therapy |
+| `evolvo_book_appointment` params | 12 | 13 (`diagnosis_confirmed`, optional boolean) |
+| system prompt | 19,738 chars | 20,128 (+390, three sentences) |
+| HU knowledge base | 12,733 B | 12,983 B |
+| RO knowledge base | 12,709 B | 12,985 B |
+
+Live agent version `agtvrsn_6101m2naaff5e3svbanyp75kn8bk`; the LLM field read `qwen35-397b-a17b` at
+write time (switched in the UI since the last entry — the tool cuts were regression-tested on
+`gpt-5.6-luna`).
+
+### Where each piece of the rule lives
+
+Deliberately spread thin, because the prompt is the expensive place to put anything:
+
+- **Which visits route to the therapist** — `provider_type` parameter description only. The booking
+  procedure already says to work `provider_type` out "exactly as the tool's description defines it",
+  so the trigger list costs nothing per turn beyond the tool schema that was already there. It names
+  szemtorna / gimnastica oculara / psiho-ortoptica and the rest, and explicitly excludes a *first*
+  look at a squint or lazy eye — that is a doctor.
+- **What to do when the rule fires** — tool description (`specialty_booking_rule` → do not offer,
+  consultation first, offer from `doctors_for_diagnosis`) and the `diagnosis_required` error clause.
+- **The prompt** — three sentences in `# Doctors and optometrists`, only the part that prevents harm
+  if everything else is ignored: vision_therapy exists, the clinic books it only on a doctor's
+  recommendation, do not offer those times, book only when the caller says a doctor recommended it.
+- **Knowledge base** — one bullet in section 24 of each document. This corrects a routing hint added
+  earlier the same day: that section lists strabism / ambliopie among what the therapy addresses,
+  which on its own could push a lazy-eye enquiry to the therapist. It now says the first appointment
+  for those is ALWAYS an ophthalmologist.
+
+Also added: the `only_specialty_providers_here` error, and the note that `vision_therapy` is the one
+`provider_type` that works without a location.
+
+### Already done, contrary to the PR
+
+PR #5 lists "a date rule" as open on the ElevenLabs side — *"nothing in the prompt tells the agent how
+to speak a date or forbids deriving one"*. The `# The clock and the calendar` section added in the
+prompt compression does exactly that: `date_spoken` translated, `relative_day` for today/tomorrow,
+never derive a weekday, never read the ISO date, do not offer `IN THE PAST`. That item can be closed.
+
+### Still open
+
+- `diagnosis_confirmed` is untested end to end. The refusal path was verified live by n8n; the
+  *accepting* path (a therapy booking with the flag set) has not been exercised from the agent.
+- The procedure text still walks a caller through name/phone before booking without knowing the slot
+  is a specialty one, so the `diagnosis_required` refusal arrives after the details are collected.
+  Recoverable — the error says to ask and re-call — but it spends turns.
+
+## 2026-09-16 — knowledge base: pszicho-ortoptika / gimnastica oculară added
+
+New section 24 in both operational FAQ documents, plus a price line in section 2. Live and mirrored
+in `elevenlabs/knowledge-base/`.
+
+| document | id | before | after |
+|---|---|---|---|
+| Hungarian FAQ | `l7TG9P3XnTjgRThXelU5` | 10,959 B | 12,733 B |
+| Romanian FAQ | `zynIEChUpgg4AaEbZInG` | 10,852 B | 12,709 B |
+
+### What was added
+
+The service is performed by **Dr. Prof. Székely Attila**, a *pszicho-ortoptikus*, and costs **70 lei**.
+It is called `pszicho-ortoptika` (also `szemtorna`) in Hungarian and `gimnastica oculară` (also
+`psiho-ortoptică`) in Romanian; each document names the other language's term so a caller can be
+understood either way. The description text is the client's, with the emojis stripped as requested and
+the bullet list kept.
+
+Two house-style guards were added on top of the supplied copy, matching how every other section in
+these documents is written:
+
+- say one or two sentences exactly as written and stop — no promised results, no "who needs it", no
+  number of sessions, no treatment length;
+- which branch Dr. Prof. Székely Attila works at and when comes only from the booking system, never
+  from memory (section 23's existing rule, restated here because this is the first section that names
+  a member of staff).
+
+### Open points
+
+- The copy contains medical claims (stroke recovery, dementia/Alzheimer progression, learning
+  difficulties). They are recorded verbatim because the client supplied them as facts about the
+  service; the guard above stops the agent elaborating on them, but they are worth a second look.
+- The title is recorded as given, `Dr. Prof. Székely Attila`. Romanian and Hungarian convention would
+  normally be `Prof. Dr.`.
+- Nothing was changed on the booking side: `provider_type` still only has `doctor` and `optometrist`,
+  so a caller asking to book eye gymnastics has no route to this specialist yet. Needs an evolvo
+  calendar and a decision on how the availability lookup should target him.
+
+## 2026-09-15 (evening, 6) — tool descriptions and built-in tool descriptions shortened; procedures audited
+
+Two parallel read-only audits (tools, procedures), then the tool-side cuts applied. Live Main is now
+version `agtvrsn_0901m2jv51v9e60vv4v3w1nkw05a`; the LLM field read `gpt-5.6-luna` at write time
+(switched in the UI since the previous entry).
+
+### What the audits found
+
+The five `evolvo_*` tools had grown to **25,119 chars (~6,600 tokens)** of description and parameter
+text — 2.5× the 10,163 chars recorded in `prompt-optimization.md`, because provider_type,
+slot_released, replaced_appointment, needs_reschedule and the phone-reuse mechanics were all added
+since. That made the tool text larger than the compressed system prompt. All four built-in tools carry
+custom descriptions (2,645 chars). The three procedures total **40,096 chars** (booking 19,767,
+cancel_or_reschedule 16,368, escalate_to_human 3,961), but only the current step's instruction plus
+its outgoing conditions sits in context per turn — the biggest single steps are availability (4,426)
+and reschedule (5,718).
+
+### Applied — tools (workspace objects, so this also reaches `New - Optofarm` and the
+`latency-step-merge` branch; `agents_get_tool_dependents` checked first)
+
+| tool | before | after |
+|---|---|---|
+| evolvo_check_availability | 8,979 | 4,638 |
+| evolvo_book_appointment | 5,892 | 3,388 |
+| evolvo_find_appointments | 2,196 | 1,404 |
+| evolvo_manage_appointment | 4,619 | 2,974 |
+| evolvo_log_request | 3,433 | 2,440 |
+| **evolvo total** | **25,119** | **14,844 (−41%)** |
+| language_detection (built-in) | 1,092 | 442 |
+| transfer_to_number (built-in) | 931 | 584 |
+| end_call (built-in) | 469 | 308 |
+| skip_turn (built-in) | 153 | 153 |
+
+Cut classes: per-language phrasing (title forms, RO/HU keyword lists, placeholder words); rules the
+system prompt already carries (date_spoken/relative_day teaching, reminder-not-confirmation,
+cancelled-not-deleted, no colleague callback on success, phone digits rules, "names come through the
+phone mangled"); rationale and all-caps emphasis; repetition within and across tools. Kept in full:
+every precondition flag (`slot_accepted`, `phone_confirmed`, `appointment_confirmed`), every
+recovery path (`offer_slot_first`, `confirm_phone_first`, `confirm_appointment_first`), every error
+code and its handling, `booking_mode`, `replaced_appointment`, `slot_released` semantics, the
+mark-then-book order, `needs_reschedule`, the phone-reuse rule on `evolvo_log_request`, all seven
+`request_type` meanings, the `doctor` name-only / Ifj.-stripping rule (not in the prompt, so it must
+live here), and the `"Aici asistentul virtual Optofarm."` prefix rule on `transfer_to_number` (lives
+nowhere else). Deliberately kept beyond the audit's proposal: the two classification examples
+`'un control' / 'kontroll'` → doctor and `'control de dioptrii' / 'dioptriaellenorzes'` →
+optometrist on `provider_type` — those are input-interpretation cues, not output phrasing, and the
+ambiguous "control" is the most plausible behaviour change otherwise.
+
+One contradiction resolved: the old check_availability description said never call it to find out
+who works at a branch; the prompt says do (name at most three). The tool clause was dropped so both
+agree with the prompt. The unverified "top-level `today` field" mention was dropped (the prompt says
+use `{{system__time}}`).
+
+Mirror: `elevenlabs/tools/*.json` (description + parameter descriptions per tool;
+`built_in_tools.json` for the four built-ins).
+
+Operational note: `agents_update` with a partial `built_in_tools` block is rejected
+(`Field required: end_call.name`) — the built-in tools object is validated whole, so send all four
+complete objects, `params.transfers` included. Deep merge does not apply inside it.
+
+### Not applied — procedures (report only)
+
+Proposals are in `elevenlabs/procedures/proposals/` (`*.before.json` = live text decoded from the
+API `content`; `*.after.tier1.json` = recommended cut, same step ids and structure, instruction text
+only; `*.after.tier2.json` = also delegates tool mechanics to the tool descriptions; `counts.txt`).
+
+Per-procedure: booking 19,767 → 12,658 (tier 1, −36%) → 11,135; cancel_or_reschedule 16,368 → 10,780
+(−34%) → 9,156; escalate_to_human 3,961 → 2,794 (−30%) → 2,271. Cut classes as for the prompt: RO/HU
+example sentences (the four-option "what is the visit for" question, name/phone/read-back lines, slot
+offer examples, two-appointment listing), rules already in the prompt, rationale, and ~60% of the
+availability step which is a copy of the evolvo_check_availability description.
+
+Why not applied now: procedures need a draft → compile → publish cycle and the transition conditions
+are LLM judgements on the step text, so premature exits from the gather and availability steps are
+the risk to watch in test calls. Two things the audit found that need fixing regardless:
+
+1. **Dangling reference, introduced by the prompt compression.** The book step and the reschedule
+   step both say "add the reminder sentence exactly as your system prompt gives it for this
+   language" — the compressed prompt no longer has per-language reminder sentences. Tier 1 rewrites
+   it to "say in one short sentence that a reminder will be sent before the appointment".
+2. `elevenlabs/booking-procedure.after.json` (17,083 bytes) is not what is live — Main's booking
+   procedure is 21,019 bytes; the earlier 22,253 → 16,361 optimisation has partly regrown.
+
+Regression on the tool cuts: suite `suite_3601m2jv5fwhfdys8h8ahk5b3g92`, four tests × 5, on
+`gpt-5.6-luna`. **20/20** — Dates 5/5, RO→HU gate 5/5, caller-opens-in-Hungarian gate 5/5, no second greeting 5/5. Same score as before the cuts. One observation, not a failure: every Luna output in this run shows stray mid-word spacing in the transcript (`Cea mai apropi ată`, `mâ ine`, `do amna doctor Il ovan Anca`), as the nano run did; the flash-lite run earlier tonight was clean. Whether that reaches TTS is untested — listen to one real Luna call before trusting it.
+
+## 2026-09-15 (evening, 5) — system prompt compressed 29,902 → 19,738 chars
+
+Motivation: a live call on `gpt-5.6-luna` showed ~14,100 cached input tokens per LLM turn, and the
+system prompt was the single largest piece of that we control. Target set by the client: main prompt
+under ~5,000 tokens. Live Main now at version `agtvrsn_9301m2jt0dy6exar7tb9mcds3nm9`.
+
+What changed in the prompt (mirror: `system-prompt.main.txt`):
+
+- **Every per-language phrasing example removed.** The old prompt spelled out Romanian, Hungarian and
+  English wordings for greeting-free reply lines, "I don't have that" lines, the reminder sentence,
+  digit-by-digit number examples, title forms (doamna doctor / doktornő / …), and the emergency line.
+  Each rule now states the behaviour once, language-neutrally ("say a reminder will be sent",
+  "never a greeting word", "the matching title in the caller's language"); the model handles the
+  surface language. This was the bulk of the saving.
+- Rationale paragraphs cut to one sentence where the rule already carried it (language gate, dates,
+  addressing, unknowns). Repeated "this is important / read this twice / there is NO exception"
+  emphasis dropped.
+- Sections merged: "Language and voice" + holding-line rule; "Voice and response rules" +
+  silent-response + repetition guard into `# Response rules`; phone read-back gate folded into
+  `# Numbers`; Ifj. rule folded into `# Doctors and optometrists`.
+- Nothing removed as a *rule*: the language gate (both directions, keyed on the language Ana is
+  about to speak), no second greeting, greeting-is-not-a-task with the language_detection carve-out,
+  Step 0 emergency and the 112 ban, date_spoken/relative_day and no date arithmetic, availability
+  starts tomorrow / no same-day, phone read-back gate, one question per turn, one-two sentences,
+  provider_type titling, Ifj. stripping for tools / saying it back, branch normalisation table,
+  Saturday = Poștei only, the unknowns list, reminder-not-confirmation, end-call rules, all guardrails.
+
+Size: 29,902 → 19,738 chars (−34%), 5,180 → 3,376 words. Token count could not be measured exactly
+(the tokenizer download is blocked from this environment); by word count it is roughly 4,300–4,700
+tokens on an OpenAI tokenizer, i.e. inside the ~5k target. The remaining ~9k of the 14k cached tokens
+is tool schemas (five evolvo tools, ~2,500 tokens of description text — see
+`prompt-optimization.md` for why they were left alone), built-in tools, procedure machinery, RAG
+context and the opening messages; those are not in the system prompt.
+
+Regression run: suite `suite_2401m2jt0wtxfpgvww6cr3765h8b`, the same four tests as the nano trial,
+five repeats each. **20/20** — Dates 5/5, RO question → HU answer gate 5/5, caller-opens-in-Hungarian gate 5/5, no second greeting 5/5. Same score the full-length prompt reached on qwen earlier today; the compression cost nothing on these four behaviours.
+
+Note on the LLM field: when this write went out, `conversation_config.agent.prompt.llm` read
+`gemini-3.5-flash-lite` with `reasoning_effort: minimal` — changed in the UI since the qwen revert
+earlier this evening; not touched here. The regression run therefore measures the compressed prompt
+on that model, not on qwen or Luna.
+
+Operational slip, recorded so it is not repeated: the first `agents_update` call for this change
+passed the literal string `$(cat)` as the prompt (shell substitution does not happen inside an MCP
+argument). The live prompt was six characters long for roughly one minute before the corrected write
+landed. Always `jq` the returned config for `prompt|length` after every write.
+
+## 2026-09-15 (evening, 4) — `gpt-5.4-nano` tried and reverted the same hour
+
+After the decoding collapse above, the obvious question was whether a different model would hold up
+better. Switched the agent LLM from `qwen35-397b-a17b` to `gpt-5.4-nano` and ran the four regression
+tests built today, five repeats each, against the live Main version
+(`agtvrsn_7801m2jqw18he2k9hjb2rnw91qb7`, suite `suite_0001m2jqwgffftzarv7hgnqathz1`).
+
+It is worse. Reverted to `qwen35-397b-a17b` within the hour.
+
+| test | qwen | gpt-5.4-nano |
+|---|---|---|
+| Language gate: RO question, HU answer | 5/5 | **5/5** |
+| Language gate: caller opens in Hungarian | 5/5 | **1/5** |
+| Dates: speak `date_spoken`, never derive today | 5/5 | **3/5** |
+| No second greeting after a language switch | 5/5 | **5/5** |
+| | **20/20** | **14/20** |
+
+### The Hungarian gate failure is a comprehension failure, not a rule failure
+
+The test history is one Romanian opening line followed by the caller saying
+*"Jó napot kívánok! Szombaton nyitva vannak?"* — unambiguous Hungarian. `gpt-5.4-nano` did call
+`language_detection` every single time, so the gate rule itself landed. It passed the wrong
+language:
+
+```
+language_detection {"reason":"Caller greeting in Romanian; ensure Romanian voice.","language":"ro"}
+```
+
+Four of five runs, three of them with that near-identical rationale. The model read a Hungarian
+sentence and asserted it was Romanian. That is the exact bug the client reported — Hungarian spoken
+with a Romanian accent — reintroduced by the model rather than by the prompt, and no prompt wording
+fixes a model that cannot tell the two languages apart.
+
+The fifth run passed, which is the same temperature-0 non-determinism seen all day.
+
+### The dates failures are empty turns
+
+The three passes were clean and correct — *"mâine, miercuri 16 septembrie, la 15:40"*, taken from
+`date_spoken`/`relative_day` exactly as instructed. The two failures graded `unknown`, with the
+judge noting:
+
+> The provided transcript ends after the tool result, and the agent has not yet provided a verbal
+> response to the user.
+
+The model called the tool, received the slots, and then said nothing at all. On a phone call that is
+dead air after a pause the caller can already hear.
+
+### Also noticed, not blocking
+
+Passing turns rendered as `mâ ine`, `do amna`, `Dr . Ilovan`, `15 :40` — stray spaces inside words
+and before punctuation. Whether that survives into TTS was not tested, and it may be an artifact of
+how the test harness reassembles the stream, so it is recorded rather than claimed.
+
+### On `max_tokens`
+
+Still `-1`, i.e. uncapped, which is why the garbled response in the previous entry ran for 8.77 s
+before the caller cut it off. A cap does not prevent a collapse; it bounds one. The prompt asks for
+one-to-two-sentence replies, so a cap in the region of 250 tokens leaves several times the headroom
+a real answer needs while cutting a runaway to roughly a second. The cost is that a genuinely long
+answer would be truncated mid-sentence with no graceful ending. Not applied — offered.
+
+## 2026-09-15 (evening, 3) — garbled speech, and "Ifj." in a Hungarian name
+
+Two calls a minute apart. Different causes, and only one of them is ours.
+
+### 1. `conv_5501m2jq1mvff9t96nj7rj9y3rmw` — the model came apart
+
+17:20. Caller: *"I would like to make an appointment."* The agent called `start_procedure`
+successfully, entered `__xi_procedure__procedure_entry_...`, and then said this, out loud, to a real
+caller:
+
+```
+ 8a rrr \n "a r r rrr r r r r r r \n r\n " r",", r\n " " r ... "type herself",", " r r ...
+```
+
+**This is not a prompt defect and no prompt can fix it.** It is token-level decoding collapse:
+
+| | |
+|---|---|
+| `producing_llm` | `qwen35-397b-a17b` |
+| `convai_llm_service_ttfb` | 1.09 s |
+| `convai_llm_service_tt_last_sentence` | **8.77 s** — it streamed garbage for ~7.7 s |
+| `temperature` | **0** |
+| `max_tokens` | **-1** (uncapped) |
+| input tokens | 20,429, `input_cache_read: 0` |
+| `interrupted` | true — the caller cut it off |
+
+The trigger is most likely the procedure entry: `start_procedure` injects the
+`<current-active-structured-procedure>` block, context jumps, and the model fell into a repetition
+loop on the next generation. **At temperature 0 there is no way out of such a loop** — greedy
+decoding re-picks the same token forever — and with `max_tokens: -1` nothing bounds how long it
+rambles.
+
+A weak guard went into the prompt (stop if you notice yourself repeating, ask the caller to bear
+with you) but it is close to useless by construction: a model in a degenerate loop is not observing
+itself. **The real levers are the model, `temperature` off 0, and a `max_tokens` cap.** Raised with
+the client; no config change made unilaterally.
+
+**Also noted:** `conversation_config.agent.prompt.llm` now reads `qwen35-397b-a17b`. At 15:19 today
+it read `gpt-5.6-luna` with qwen serving anyway. Something changed the stored value between 15:19
+and 17:20 — which, together with `pre_tool_speech` reverting on 2 of 5 writes, points at UI saves
+landing on the agent mid-session.
+
+**Third failure from this model today**, after ignoring the language_detection instruction on ~1 in
+3 first-turn Hungarian openings and getting ISO-to-spoken date arithmetic wrong twice in one call.
+
+### 2. `conv_3301m2jq2k9afk9bpvv3996a0dcm` — "Iszovik Jeremiasz László"
+
+17:21. What the caller said, as Scribe transcribed it:
+
+> *"Iszovik Jeremiasz Lászlóhoz szeretnék időpontot foglalni."*
+
+**"Iszovik" is the ASR's version of "ifjabbik".** The caller asked for *ifjabbik Jeremiás László* —
+the younger — and the agent passed the mangled particle straight into `check_availability`.
+
+n8n's `nameMatch` requires **every** query token to match a calendar token
+(`qw.every(q => nw.some(...))`). "jeremias" and "laszlo" matched perfectly; "iszovik" matched
+nothing; the whole lookup failed. The agent then recovered well — it offered *"Optometrista Ifj
+Jeremias Laszlo"* and *"Optometrista Jeremias Zoltan"* and asked which — but to the caller it read
+as "the system can't find him".
+
+Fixed in two places, deliberately both, because a concrete instruction at the point of use beats a
+general rule elsewhere (that is what made the second-greeting bug survive its first fix):
+
+- **Prompt**, new `## "Ifj." in a Hungarian name`: what the particle means, never send it to a tool,
+  drop any leading word you are not confident you heard, and **say** it when naming the person back,
+  because where two people share a name it is the only thing that distinguishes them.
+- **`evolvo_check_availability`'s `doctor` parameter**, which said *"Provider's name AS THE CALLER
+  SAID IT"* — precisely the instruction that sent "Iszovik" through. It now says name only, explains
+  that every word must match so one wrong word fails the lookup, and names the particle. The
+  `no_match` branch also now says to retry without the uncertain leading word before offering
+  alternatives.
+
+**For the n8n side, not blocking:** adding `ifj`, `ifjabb`, `ifjabbik` to the `STOP` list in
+`CA Match Calendars` would strip the particle from both sides and make a correctly-transcribed
+"ifjabb Jeremiás László" match regardless of what the prompt does. It would not have saved this
+call — "Iszovik" is not in any stop list — so the prompt fix is needed either way. Worth considering
+whether `nameMatch` should tolerate one unmatched query token rather than requiring all of them.
+
+**Prompt: 28,650 → 29,902 characters.**
+
+## 2026-09-15 (evening, 2) — the second greeting: the rule below was supplying it
+
+Reported again after the previous fix: the agent still says "Hello" / "Jó napot" after switching
+language. The gate rule added an hour earlier said *do not greet them again* — and it lost, because
+of two things I had put there myself.
+
+**1. The greeting rule was handing it the greeting.** `A GREETING IS NOT A TASK` listed the lines to
+reply with, and every one of them opened with a greeting word:
+
+```
+Romanian "Bună ziua! Cu ce vă pot ajuta?"   Hungarian "Jó napot! Miben segíthetek?"
+English  "Hello! How can I help you today?"  ...  "Üdvözlöm! Mondja, kérem."
+```
+
+A prohibition in one section cannot beat a concrete example in another. The examples now carry no
+greeting word at all — `"Miben segíthetek?"` / `"Mondja, kérem."` / `"Hallgatom."` and the Romanian
+and English equivalents — with the reason stated: **the opening message already said hello, and that
+is the only greeting the call gets.**
+
+**2. My own carve-out.** The gate ended with *"The one exception is when a greeting is genuinely the
+answer to what they just said, because their first words to you were a greeting"* — which is
+precisely the reported case, since a caller who opens in Hungarian usually opens by saying hello.
+Removed and replaced with "There is NO exception to this."
+
+**Scope note.** This is now absolute rather than switch-only: Ana never greets twice in any language.
+The double greeting was never really about switching — her opening line already says "Bună ziua", so
+replying "Bună ziua!" to a Romanian caller was the same defect, just less audible. If the Romanian
+greeting is wanted back, it is one line in `A GREETING IS NOT A TASK`.
+
+**Test** `test_9601m2jpwdyzfkt9kv51r4ewpadd`: Romanian opening line, caller says "Jó napot
+kívánok!", `language_detection(hu)` succeeds, and the reply is judged **only** on whether any
+greeting word is present, in any language, anywhere in the line. **5/5 pass** — every run answered
+`"Miben segíthetek?"`.
+
+**`pre_tool_speech` again.** It reverted to `auto` on this round's prompt write and was re-applied.
+Running count: **2 of 4 prompt writes this session reset it, 2 did not.** So the earlier entry's
+"not established" still stands as to cause, but the write is clearly implicated. Re-read and
+re-apply after every agent write; do not assume it held.
+
+**Prompt: 28,167 → 28,650 characters.**
+
+## 2026-09-15 (evening) — speaking dates from n8n's fields, and tone after a language switch
+
+### 1. The agent was doing date arithmetic and getting it wrong
+
+Reported from `conv_4701m2jk8460e2es63a4zbc5j21c` / n8n execution 1409. n8n returned
+`earliest 2026-09-16 15:40`; the agent said *"astăzi, marți 15 septembrie, ora 15:40"* — a slot that
+had gone forty minutes earlier. The next offer, `2026-09-17 10:00`, came out as *"mâine, miercuri 16
+septembrie"*. Both exactly one day early, weekday name included. **n8n's data was right both times**
+and could not have contained anything for today: `date_searched_from` was tomorrow.
+
+n8n has shipped the fix on its side — every date now carries `date_spoken` (`"Wednesday 16
+September"`, English, to be translated) and `relative_day` (`today` / `tomorrow` / `the day after
+tomorrow` / `in N days` / `IN THE PAST - do not offer this`), plus a top-level `today` on
+`check_availability`. Contract: "Speaking dates" in `api-docs/ELEVENLABS_TOOLS.md`.
+
+`# The clock and the calendar` rewritten around those fields. `{{system__time}}` is now explicitly
+demoted to *understanding* a caller who says "next Tuesday" — never to producing a spoken date:
+
+> YOU DO NOT CALCULATE DATES. EVER. [...] Say `date_spoken` translated, say today or tomorrow ONLY
+> when `relative_day` is exactly that word, never work a weekday out from the YYYY-MM-DD date, and
+> never read that date aloud — it is for sending back to the booking tool, not for speaking.
+
+**A correction to this morning's work.** The `evolvo_check_availability` description written earlier
+today said *"work the weekday out from the current date and time given in your system prompt"* —
+which is precisely the arithmetic that failed. That sentence was mine, it was live for a few hours,
+and it is now replaced with the `date_spoken` / `relative_day` rule. `date_from` also now documents
+that evolvo rejects a non-future date.
+
+**Regression test** `test_0801m2jn3v05fstbq6q9fv6xpszs` — an LLM-response test seeded with the real
+payload shape (`date_spoken: "Wednesday 16 September"`, `relative_day: "tomorrow"`,
+`system__time` pinned to the hour of the live failure) and failing on "astăzi", on 15 septembrie, on
+a wrong weekday, or on reading the ISO date aloud. **5/5 pass**, every run answering *"este mâine,
+miercuri 16 septembrie, la ora 15:40"*.
+
+### 2. Tone reset after a language switch
+
+Reported: after switching, the agent changes tone and sometimes opens with "Hello!" before the
+actual answer. Added to the language gate:
+
+> AFTER THE SWITCH, JUST CARRY ON. The tool call is invisible to the caller: it is not a new call,
+> not a new conversation, and not a reason to start over. Same warmth, same pace, same person. Do
+> NOT greet them again [...] and make no sound, no filler and no announcement before your reply.
+
+With one carve-out, so it does not fight the greeting rule: a greeting is still the right reply when
+the caller's own first words were a greeting.
+
+### Still open, and not ours to close
+
+`check_availability` searches from tomorrow and evolvo's `get_work_days.php` rejects a non-future
+`date_from`, so **a same-day appointment cannot be offered at all**. That is a product limit, not a
+defect. The prompt now states it and tells the agent to give the branch's direct number and offer a
+transfer instead. Worth a decision from Optofarm if same-day booking is ever wanted.
+
+Item 5 of the README handover ("the agent speaks dates a day early — one prompt sentence is still
+missing") is **done on this side**; tick it once `n8n/spoken-date-labels` and this branch both land.
+
+**Prompt: 26,951 → 28,167 characters.** Third increase today, each against a reported defect. The
+prompt is now 4,836 characters longer than it started this morning, which is worth a compression
+pass once the current round of fixes has been through a live call.
+
 ## 2026-09-15 (later still) — the gate verified, 10/10
 
 The accent fix was deployed blind, so it got a test harness. ElevenLabs **tool-call unit tests**

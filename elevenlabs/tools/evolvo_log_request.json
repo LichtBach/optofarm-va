@@ -1,0 +1,67 @@
+{
+  "name": "evolvo_log_request",
+  "description": "Log a callback request for a colleague: order status, a price you do not hold, stock, a complaint about glasses already made, wholesale or factory enquiries, a plain callback, or a booking or cancellation the scheduling tools could not complete. Needs the caller's real full name (never a placeholder; ask first if missing). Phone: if a number was already dictated and confirmed earlier in this call, leave phone and phone_confirmed out - the system reuses it - and do not ask for it or read it back again. Only when none has been confirmed, ask for one, read it back digit by digit, wait for the yes, then send phone plus phone_confirmed true. phone_missing: nothing logged, no number known - ask for one, read it back, call again. confirm_phone_first: nothing logged - read the number in read_back back, ask if it is correct, end your turn, then call again with phone_confirmed true. missing_fields: ask only for the listed details (never a phone it did not ask for), then call again. success: say a colleague will call back, no named person or time. duplicate true: already logged, do not log again. Any other failure: give the branch's direct number from the knowledge base. Never say it was passed on unless success is true.",
+  "parameters": {
+    "request_type": {
+      "type": "string",
+      "description": "order_status = are my glasses ready; price_enquiry = a price you do not hold; stock_enquiry = is a frame, lens or vitamin available; complaint = a problem with glasses already made; b2b_lead = wholesale, factory or partnership; callback = a general request to be rung back, including a booking or cancellation the tools could not complete; other = anything else.",
+      "enum": [
+        "order_status",
+        "price_enquiry",
+        "stock_enquiry",
+        "complaint",
+        "b2b_lead",
+        "callback",
+        "other"
+      ]
+    },
+    "patient_name": {
+      "type": "string",
+      "description": "The caller's real full name as given. Never a placeholder (unknown, N/A or its equivalents); ask first if missing.",
+      "enum": null
+    },
+    "phone": {
+      "type": "string",
+      "description": "Leave out if a number was already dictated and confirmed earlier in this call; it is reused. Otherwise digits only, exactly as dictated, no spaces, no leading zero or country code added or removed.",
+      "enum": null
+    },
+    "phone_confirmed": {
+      "type": "boolean",
+      "description": "Only together with phone: true only if you just read that exact number back digit by digit and the caller answered yes in a later turn. Leave both out when a number was confirmed earlier in this call.",
+      "enum": null
+    },
+    "branch": {
+      "type": "string",
+      "description": "The branch this concerns, when the caller named one. Leave out if unknown.",
+      "enum": [
+        "Postei",
+        "Trandafirilor",
+        "Republicii",
+        "Bulevard",
+        "Fortuna",
+        "Doja",
+        "Reghin",
+        "Sovata"
+      ]
+    },
+    "summary": {
+      "type": "string",
+      "description": "One or two plain sentences on what the caller wants, in the call language, written for a colleague. Include doctor, date and time if it concerns an appointment. If they asked several unknown questions, list all of them.",
+      "enum": null
+    },
+    "language": {
+      "type": "string",
+      "description": "The language this call is being conducted in.",
+      "enum": [
+        "ro",
+        "hu",
+        "en"
+      ]
+    },
+    "idempotency_key": {
+      "type": "string",
+      "description": "",
+      "enum": null
+    }
+  }
+}
