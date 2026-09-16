@@ -143,7 +143,7 @@ appointment). See [`n8n/CHANGELOG.md`](n8n/CHANGELOG.md) and
 4. **The ordering leak is fixed in wording but unproven in a call.** The ported `booking` procedure
    turns "never check availability before the purpose is known" from a rule into a stop condition.
    Watch it on the next smoke test rather than assuming it holds.
-5. **The agent speaks dates a day early — one prompt sentence is still missing (raised 2026-09-15).**
+5. ~~**The agent speaks dates a day early — one prompt sentence is still missing**~~ — **done 2026-09-16**, verified on the live agent: the prompt now carries "You do not calculate dates… never derive a weekday from the YYYY-MM-DD date". Kept below for the history.
    On a live call it offered a slot **40 minutes in the past**: n8n returned
    `earliest 2026-09-16 15:40` and the agent said *"astăzi, marți 15 septembrie, ora 15:40"*, then
    read `2026-09-17 10:00` back as *"mâine, miercuri 16 septembrie"*. Both a day early, weekday name
@@ -160,7 +160,7 @@ appointment). See [`n8n/CHANGELOG.md`](n8n/CHANGELOG.md) and
    and evolvo rejects a non-future `date_from`, so **no slot it returns is ever today** — if the agent
    ever says "today", it has misread the data, and a same-day appointment simply cannot be offered.
 
-6. **The psycho-orthoptics provider needs a prompt rule (raised 2026-09-16, n8n side done).**
+6. ~~**The psycho-orthoptics provider needs a prompt rule**~~ — **done 2026-09-16**, verified on the live agent: `provider_type` enum carries `vision_therapy`, `evolvo_book_appointment` has `diagnosis_confirmed`, and both tool descriptions handle `specialty_booking_rule` / `diagnosis_required`. Kept below for the history.
    `Dr. Prof. Szekely Attila  - Consiliere / Terapie psiho-ortoptica` (Republicii) is the only
    calendar of 30 that is not general eye care, and he *was* the earliest free slot at that branch —
    so "the soonest appointment in town centre" offered a psycho-orthoptics counsellor to a caller who
@@ -192,6 +192,22 @@ appointment). See [`n8n/CHANGELOG.md`](n8n/CHANGELOG.md) and
    first → offer a doctor from `doctors_for_diagnosis` → book the therapy on a later call with
    `diagnosis_confirmed: true` once the caller confirms they already have the diagnosis.
    `diagnosis_confirmed` needs adding to the `evolvo_book_appointment` tool schema.
+
+7. **`evolvo_find_appointments`'s description has not caught up with the date fields (raised 2026-09-16).**
+   `FIND Format Results` and `MAN Find Target` now put `date_spoken` and `relative_day` on every
+   appointment (and `MAN`'s `read_back` string uses the spoken date), but the tool description still
+   describes each entry as `date YYYY-MM-DD, time HH:MM` and tells the agent to read back
+   *"person, weekday, date, time"* — with no mention of either field. The prompt's global date rule
+   probably carries it, but the tool description is what the agent reads at the moment it speaks, and
+   this is the **cancel** flow: naming the wrong day here means cancelling someone else's appointment.
+   Same class of bug as the 15 September one, on the path where it costs most.
+   Two optional tidies while you are in there: point at `no_free_slots` and the leading `note` rather
+   than the absent `available_days` array (your prose predates the field and still works), and the
+   Hungarian title-stripping burden can come off the `doctor` parameter now that `words()` strips
+   title stems server-side — though keeping it costs nothing.
+   **Caveat on my side:** FIND's `date_spoken` is the one path I unit-tested against the live node
+   code but never exercised end-to-end, because the test phone has no future appointment and booking
+   one writes a real evolvo record. If you mock it, mock it with the fields present.
 
 ### Open — for the clinic (not either agent)
 
