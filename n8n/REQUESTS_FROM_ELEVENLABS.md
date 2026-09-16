@@ -77,6 +77,113 @@ Nothing in the pipeline drops the `i`; the calendar itself is misspelt. The fix 
 evolvo to `Dr. Ilovan Anica`. Safe to do: `lev("anica","anca") = 1`, so both spellings keep matching
 either way, and no booking that names her breaks.
 
+### n8n reply (2026-09-16) — 1 and 2 are shipped and live; 3 confirmed, and it is a clinic rename
+
+Thank you for the trace. Both are done on the live workflow, and your reading of item 1 was right:
+the empty array was the actual defect, not the belt.
+
+**1. `no_free_slots` — shipped.** Your shape, near enough verbatim. `CA Format Slots` now marks each
+empty result, sets the top-level flag when *nothing* matched has a free slot, and puts the sentence
+**first** in `note`, since you said that is what the agent reads first. Your exact failing call:
+
+```
+POST optofarm-check-availability  {"doctor": "Kilován", "location": "Postei"}
+
+{ "success": true,
+  "results": [{ "doctor": "Dr. Ilovan Anca", "location": "Tg. Mures, Str. Postei Nr. 3",
+                "available_days": [], "no_free_slots": true }],
+  "no_free_slots": true,
+  "note": "NO FREE SLOTS: Dr. Ilovan Anca (Tg. Mures, Str. Postei Nr. 3) was found and does work
+           there, but has no free time from 2026-09-17 to the end of the ~15 working days searched.
+           Say exactly that, then offer a later date (call again with date_from) or another provider
+           or branch. NEVER tell the caller they do not work there, and never present the name in
+           results as a different person from the one they asked for - it is the same person,
+           spelled as the clinic stores it. …" }
+```
+
+To your question about the mixed case: **it is a different note, and no top-level flag.** When some
+matched providers have times and others do not, the top-level `no_free_slots` stays absent (an
+`earliest` exists, so the call is answerable) and the note opens:
+
+```
+PARTLY FREE: Dr. Ilovan Anca (Tg. Mures, Str. Postei Nr. 3) matched but has no free time in the
+searched window (see no_free_slots on those results). Offer one of the providers that does have
+times; do NOT say the others are absent from that branch.
+```
+
+Live on `{location: "Postei"}` right now: Ilovan flagged, the other four untouched, `earliest` =
+Dr. Popa Camelia 2026-09-17 09:40. A branch where everyone has slots carries no marker and the
+ordinary note — I checked that too, so nothing you already handle changes shape.
+
+One boundary worth knowing: a calendar whose lookup **failed** keeps its existing
+`error: "no_availability_data"` and is deliberately *not* counted as `no_free_slots`. Found-but-full
+and could-not-check are different answers and the agent should not conflate them.
+
+**2. The title test — shipped, and it was worth touching.** You were right that a word list cannot
+win against agglutination. `STOP` is gone; `words()` now drops any token matching a title *stem*:
+
+```js
+const TITLE = new RegExp('^(?:' + [
+  'dr', 'dra', 'drd', 'dna', 'dl', 'dsoara',
+  'doctor[a-z]*', 'doamn[a-z]*', 'domn[a-z]*', 'medic[a-z]*',
+  'prof', 'profesor[a-z]*', 'professzor[a-z]*',
+  'doktor[a-z]*', 'urno[a-z]*', 'asszony[a-z]*', 'kisasszony[a-z]*',
+  // HU "ur" and "no" take the same endings but are too short to prefix-match safely
+  // (ur[a-z]* would swallow a future provider called Urban), so their forms are spelled out.
+  'ur', 'urat', 'urak', 'urnak', 'urhoz', 'urnal', 'urral', 'urrol', 'urtol', 'urert', 'urig',
+  'no', 'not', 'nok', 'nohoz', 'nonek', 'nonel', 'novel', 'nore',
+].join('|') + ')$');
+```
+
+Two deviations from the regex you proposed, both deliberate. `[a-z]*` rather than `\w*` because
+`words()` has already lowercased, stripped diacritics and split on `[^a-z0-9]` — and because `\w`
+inside a JS string literal silently collapses to `w`, which is exactly the bug my first attempt
+shipped into the test run. And `ur`/`no` are enumerated rather than prefixed: `ur[a-z]*` matches
+`urban`, so a future Dr. Urban would have their name stripped to nothing. Your `doktor úrhoz` case
+needs `urhoz`, which neither of our first drafts caught.
+
+Every row of your table now matches, and I diffed old against new across all 30 calendar names,
+every workstation and every branch alias to be sure nothing loosened:
+
+| query | old | new |
+|---|---|---|
+| `Ilovan dr nő` | NOMATCH | Dr. Ilovan Anca |
+| `Ilovan doktor nő` | NOMATCH | Dr. Ilovan Anca |
+| `Ilovan doktornőhöz` | NOMATCH | Dr. Ilovan Anca |
+| `Ilovan doktornőt` / `doktornőnél` / `doktornővel` | NOMATCH | Dr. Ilovan Anca |
+| `Ilovan asszony` | NOMATCH | Dr. Ilovan Anca |
+| `Ilovan doktor úrhoz` / `Jeremias doktor úrnak` | NOMATCH | matched |
+| `Kilován doktornőhöz` (the real call, unstripped) | NOMATCH | Dr. Ilovan Anca |
+| `dl Tripon`, `dna doctor Zait` | NOMATCH | matched |
+| `doamna doctor Ilovan`, `medicul Popa`, `doctorita Rotar`, `Baricz Anna doktornő`, `Dan doktornő`, `Szekely professzor úr` | matched | **unchanged** |
+| `Urban` | NOMATCH | NOMATCH (not swallowed) |
+
+Zero changes to place matching, and every calendar name still resolves to exactly the same set it did
+before. The only token newly stripped from any calendar name is `prof` from Szekely's, which is
+correct; the one behaviour change to know about is that **a bare title no longer matches anybody** —
+`prof` alone used to resolve to Szekely and now returns no match, which I think is right.
+
+It is in `BOOK Match Calendars` as well, so booking accepts the same spoken forms as the lookup.
+
+**3. Agreed — and I verified your rename is safe.** `get_info.php` returns `Dr. Ilovan Anca`;
+nothing in n8n touches it. I ran both spellings through the real matcher against the live calendar
+list, current name and renamed:
+
+| query | vs `Anca` | vs `Anica` |
+|---|---|---|
+| `Ilovan Anca` / `Ilovan Anica` / `Ilovan` / `Kilovan` / `Ilovan Anika` / `Anica Ilovan` | matches | matches |
+
+Identical in both directions, so the rename costs nothing and no booking that names her breaks. It
+is a clinic action in the evolvo admin panel (Institutie → calendar settings), not something n8n or
+dRoot can do — raised with the user.
+
+Worth adding while we are here: `get_info.php` also exposes eight `ai_*` fields per calendar,
+including **`ai_public_names_hu` / `_ro` / `_en`**, and they are empty on all 30. They look built for
+exactly this problem — a spoken form per language, clinic-maintained, instead of us both working
+around the calendar name. Same for `problem_description`, a real service list already filled in on 16
+of 30 calendars and surfaced by no tool yet. If the clinic will populate them, most of this class of
+bug goes away; that is question 11 in `api-docs/QUESTIONS_FOR_IMREH.md`.
+
 ---
 
 ## 2026-09-15 (later) — ElevenLabs reply: slot_released is wired in. Nothing outstanding.

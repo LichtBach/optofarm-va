@@ -143,6 +143,68 @@ appointment). See [`n8n/CHANGELOG.md`](n8n/CHANGELOG.md) and
 4. **The ordering leak is fixed in wording but unproven in a call.** The ported `booking` procedure
    turns "never check availability before the purpose is known" from a rule into a stop condition.
    Watch it on the next smoke test rather than assuming it holds.
+5. **The agent speaks dates a day early — one prompt sentence is still missing (raised 2026-09-15).**
+   On a live call it offered a slot **40 minutes in the past**: n8n returned
+   `earliest 2026-09-16 15:40` and the agent said *"astăzi, marți 15 septembrie, ora 15:40"*, then
+   read `2026-09-17 10:00` back as *"mâine, miercuri 16 septembrie"*. Both a day early, weekday name
+   included — the model is doing ISO→spoken date arithmetic and getting it wrong, and n8n's data was
+   right both times (`conv_4701m2jk8460e2es63a4zbc5j21c`, n8n execution 1409).
+   **n8n side is done:** every date now ships with `date_spoken` (`"Wednesday 16 September"`, English,
+   to be translated) and `relative_day` (`today` / `tomorrow` / `the day after tomorrow` / `in N days` /
+   `IN THE PAST - do not offer this`), and every `note` / `next_step` / `read_back` repeats the rule
+   inline. See "Speaking dates" in [`api-docs/ELEVENLABS_TOOLS.md`](api-docs/ELEVENLABS_TOOLS.md).
+   **What is needed from your side:** a prompt rule, because the inline tool-result instruction is
+   currently the only thing steering the model. Something like *"When you name a day, say the tool's
+   `date_spoken` in the caller's language; call it today or tomorrow only if `relative_day` says so.
+   Never work a date out yourself."* Also worth knowing: `check_availability` searches from **tomorrow**
+   and evolvo rejects a non-future `date_from`, so **no slot it returns is ever today** — if the agent
+   ever says "today", it has misread the data, and a same-day appointment simply cannot be offered.
+
+6. **The psycho-orthoptics provider needs a prompt rule (raised 2026-09-16, n8n side done).**
+   `Dr. Prof. Szekely Attila  - Consiliere / Terapie psiho-ortoptica` (Republicii) is the only
+   calendar of 30 that is not general eye care, and he *was* the earliest free slot at that branch —
+   so "the soonest appointment in town centre" offered a psycho-orthoptics counsellor to a caller who
+   wanted glasses.
+   **n8n side is done:** his name is split into a speakable `doctor` plus a separate `service`, and he
+   is now excluded from every search unless the caller **named him** or the tool is called with
+   `provider_type: "vision_therapy"` (which works with no location too, since there is only one such
+   calendar). `provider_type: "doctor"` and unfiltered searches no longer reach him, and he is kept
+   out of every `available_doctors` / `matching_doctors` / `available_provider_types` list so he
+   cannot be offered out of an error payload either.
+   **What is needed from your side:** the routing rule. He is already in the knowledge base, but
+   nothing makes the tool call ask for him. Send `provider_type: "vision_therapy"` for squint, lazy
+   eye, eye exercises / *szemtorna*, vision therapy, binocular coordination, vision rehab after a
+   stroke, or learning-and-focus difficulties — and never offer him for glasses, contact lenses, eye
+   pressure, OCT, general check-ups, eye disease or anything urgent. His full scope is in
+   [`api-docs/ELEVENLABS_TOOLS.md`](api-docs/ELEVENLABS_TOOLS.md) under "The specialty provider".
+   **Diagnosis first — answered by the clinic 2026-09-16, and now enforced server-side.** An ordinary
+   eye doctor must examine the caller and recommend the therapy *before* a psycho-orthoptics
+   appointment is made. So "my child has a lazy eye" is offered **a doctor**, not the therapist.
+   `check_availability` returns a top-level `specialty_booking_rule` whenever he is in the results —
+   with `doctors_for_diagnosis` naming the general providers at his own branch so you can offer the
+   consultation in the same turn — and the `note` opens with `READ specialty_booking_rule FIRST`.
+   `book_appointment` refuses his slots with `diagnosis_required` unless `diagnosis_confirmed: true`
+   is sent, and that refusal happens before anything is written (verified live: his six 17 Sept slots
+   were still free after a refused attempt).
+   So the prompt should still *reach* him — by name or `provider_type: "vision_therapy"` — because
+   that is how it learns the rule applies. What it must not do is offer his times to an undiagnosed
+   caller. The shape of that turn: recognise the therapy request → say a doctor's consultation comes
+   first → offer a doctor from `doctors_for_diagnosis` → book the therapy on a later call with
+   `diagnosis_confirmed: true` once the caller confirms they already have the diagnosis.
+   `diagnosis_confirmed` needs adding to the `evolvo_book_appointment` tool schema.
+
+### Open — for the clinic (not either agent)
+
+- **Rename the `Dr. Ilovan Anca` calendar to `Dr. Ilovan Anica`** in the evolvo admin panel. The
+  calendar name is what the agent speaks, and it is misspelt: a caller corrected the agent on air on
+  2026-09-15 (`conv_9601m2jaxsfje7eandzfxxpafbvt`). Verified safe — both spellings match either way
+  through the n8n matcher, so nothing breaks and no booking that names her is affected.
+- **Populate `ai_public_names_hu` / `_ro` / `_en`** (empty on all 30 calendars). They give a spoken
+  form per language, clinic-maintained, and would retire the name-guessing on both sides — see
+  question 11 in [`api-docs/QUESTIONS_FOR_IMREH.md`](api-docs/QUESTIONS_FOR_IMREH.md).
+- **Fill in `problem_description` for the 14 calendars where it is blank** (it is a real service list
+  on the other 16). That is the clean input for visit-reason routing, replacing the name-prefix
+  heuristic.
 
 ### Open — n8n side, answered 2026-09-14
 

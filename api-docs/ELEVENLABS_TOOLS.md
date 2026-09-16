@@ -27,17 +27,139 @@ Ask the caller for city / preferred location / preferred doctor / date **before*
 | `city` | string, optional | e.g. "Targu Mures", "Reghin", "Sovata" |
 | `location` | string, optional | e.g. "Fortuna", "Postei" |
 | `date_from` | string, optional | YYYY-MM-DD, must be future; defaults to tomorrow. For "in 2 months" requests pass that future date — the API then scans the next ~15 working days of the doctor's schedule from there |
-| `provider_type` | string, optional | `doctor` or `optometrist` — **added 2026-09-11, not previously documented here.** Filters the calendars searched. Anything other than those two values is ignored (treated as unfiltered) rather than rejected. **Ignored entirely when `doctor` is given**, since naming a provider is more specific than naming a kind |
+| `provider_type` | string, optional | `doctor`, `optometrist`, or `vision_therapy` (**added 2026-09-16** — see "The specialty provider" below). Filters the calendars searched. Separators are normalised (`vision therapy`, `vision-therapy` all work); anything else is ignored (treated as unfiltered) rather than rejected. **Ignored entirely when `doctor` is given**, since naming a provider is more specific than naming a kind |
 
-Success: `results[]` per matching calendar (max 4) with `available_days[]` (`date`, `free_times[]` 24h, `total_free_slots`) and `slot_duration_minutes`; days with no free slot are dropped. Plus (added 2026-09-07):
-- `earliest` — `{date, time, doctor, location}`: the single earliest free slot across all matched calendars (the agent offers exactly this to urgent / "as soon as possible" / no-preference callers).
-- when `date_from` was sent: `requested_date`, `requested_date_status` (`available` | `not_available`) and, if available, `requested_date_slots` (`{date, time, doctor, location, free_times[]}` for that exact day).
+Success: `results[]` per matching calendar (max 4) with `available_days[]` (`date`, `date_spoken`, `relative_day`, `free_times[]` 24h, `total_free_slots`) and `slot_duration_minutes`; days with no free slot are dropped. Plus (added 2026-09-07):
+- `earliest` — `{date, date_spoken, relative_day, time, doctor, location}`: the single earliest free slot across all matched calendars (the agent offers exactly this to urgent / "as soon as possible" / no-preference callers).
+- when `date_from` was sent: `requested_date`, `requested_date_status` (`available` | `not_available`) and, if available, `requested_date_slots` (`{date, date_spoken, relative_day, time, doctor, location, free_times[]}` for that exact day).
+- `today` (added 2026-09-15) — today's date in Bucharest, so the agent never has to infer it. `date_searched_from` defaults to **tomorrow** and evolvo's `get_work_days.php` rejects a non-future `date_from`, so **no slot this tool returns is ever today**: a same-day appointment cannot be offered through it at all.
 
-Every result, plus `earliest` and `requested_date_slots`, also carries `provider_type` (`doctor` | `optometrist`). A top-level `provider_type_filter` echoes the filter **only when it actually ran** — naming a `doctor` bypasses the filter, so a missing echo is normal and must not be read as the filter having failed.
+Every result, plus `earliest` and `requested_date_slots`, also carries `provider_type` (`doctor` | `optometrist` | `vision_therapy`) and, for a specialty calendar only, `service` (the service as evolvo labels it, e.g. `Consiliere / Terapie psiho-ortoptica`). A calendar with no service suffix has no `service` key at all. A top-level `provider_type_filter` echoes the filter **only when it actually ran** — naming a `doctor` bypasses the filter, so a missing echo is normal and must not be read as the filter having failed.
 
-Errors: `no_match` (includes `available_doctors`/`available_locations` to offer — the agent offers at most three), `too_many_matches` (ask caller to narrow down), `doctor_not_at_location` (the doctor exists but not at the requested branch; carries `doctor_locations[]` and `doctors_at_requested_location[]`), and `no_provider_of_type` (the branch has no provider of the requested kind — e.g. Fortuna has no optometrist).
+Errors: `no_match` (includes `available_doctors`/`available_locations` to offer — the agent offers at most three), `too_many_matches` (ask caller to narrow down), `doctor_not_at_location` (the doctor exists but not at the requested branch; carries `doctor_locations[]` and `doctors_at_requested_location[]`), `no_provider_of_type` (the branch has no provider of the requested kind — e.g. Fortuna has no optometrist), and `only_specialty_providers_here` (the branch has no general eye doctor or optometrist at all, only a specialty provider who must not be offered — carries `other_locations` to redirect to).
 
-**How provider type is decided:** off the calendar-name prefix. Verified live on 2026-09-14 across all 30 calendars — 21 `Dr. …`, 9 `Optometrist …`, none unmatched. Every non-doctor is *explicitly* prefixed `Optometrist`; nothing is identified by the absence of "Dr.". The list is not static (it was 16 calendars on 2026-09-11), so re-verify after clinic changes. The mapping from *reason for the visit* to provider type is a prompt-side decision and is not made here — n8n only filters on what it is asked for.
+**How provider type is decided:** off the calendar name — a service suffix first (see below), otherwise the prefix. Verified live on 2026-09-14 across all 30 calendars — 21 `Dr. …`, 9 `Optometrist …`, none unmatched. Every non-doctor is *explicitly* prefixed `Optometrist`; nothing is identified by the absence of "Dr.". The list is not static (it was 16 calendars on 2026-09-11), so re-verify after clinic changes. The mapping from *reason for the visit* to provider type is a prompt-side decision and is not made here — n8n only filters on what it is asked for.
+
+## The specialty provider — psycho-orthoptic therapy (added 2026-09-16)
+
+One calendar of the 30 is not general eye care. evolvo writes its service into the **name**:
+
+```
+Dr. Prof. Szekely Attila  - Consiliere / Terapie psiho-ortoptica
+Tg. Mures, Piata Republicii 5   ·   30-minute slots   ·   afternoons only
+```
+
+Two things follow from that, and both are now handled server-side.
+
+**1. The name is split.** `doctor` is `"Dr. Prof. Szekely Attila"` and the suffix comes back separately
+as `service`. Before this, the agent read the whole string aloud — *"Doctor Professor Szekely Attila
+minus Consiliere slash Terapie psiho-ortoptica"* — and passed it into booking. He is the only calendar
+with a suffix, so the other 29 are byte-identical to before (no `service` key at all). The name matcher
+resolves `Szekely Attila`, `Székely Attila`, `Szekely`, `Prof. Szekely Attila`, ASR variants like
+`Sekely Atila`, **and** the full suffixed string to the same single calendar, so `book_appointment`
+works with whichever form the agent sends.
+
+**2. He is hidden unless the caller asks for him.** He used to be the `earliest` free slot at
+Republicii, which made a psycho-orthoptics counsellor the default answer for *"the soonest appointment
+in town centre"*. A specialty calendar is now excluded from every search **except** when:
+
+- the caller **named the person** (`doctor` is sent and matches him) — an explicit request always wins; or
+- `provider_type: "vision_therapy"` is sent. This also works **without** a location, since there is
+  only one such calendar in the clinic.
+
+`provider_type: "doctor"` no longer returns him (he is not a `doctor` kind), and an unfiltered search
+never returns him. He is also kept out of `available_doctors`, `doctors_at_requested_location`,
+`matching_doctors` and `available_provider_types`, so the agent cannot offer him from an error payload
+either.
+
+### When to ask for `vision_therapy` — his actual scope
+
+Psycho-orthoptic treatment uses interactive visual stimuli to develop fixation, eye movement,
+eye–hand coordination, peripheral vision and reaction time. Beyond the eye muscles it targets the
+brain's processing of visual information and the restoration of binocular cooperation. It is for
+children and adults with **strabismus (squint), amblyopia (lazy eye), or coordination-type vision
+problems**, where the aim is to raise visual acuity and strengthen the weak eye. It also helps
+reflexes and visual memory, supports recovery after illness (recommended post-stroke; it can slow the
+progression of dementia / Alzheimer's), and is one of the most useful methods for **learning or
+focusing difficulties**.
+
+So: send `provider_type: "vision_therapy"` when the caller asks about squint, lazy eye, eye
+exercises / *szemtorna* / vision therapy, binocular coordination, vision rehabilitation after a
+stroke, or learning-and-focus difficulties — or asks for him by name.
+
+**Do not route to him** for glasses or contact-lens prescriptions, eye pressure, OCT / retinal
+photography, general check-ups, eye disease, or anything urgent. Those are `doctor` or `optometrist`,
+and the server will no longer let an unfiltered search drift onto him.
+
+### Diagnosis first — the clinic's rule (confirmed 2026-09-16), enforced server-side
+
+**A caller must see an ordinary eye doctor and get a diagnosis before a psycho-orthoptics appointment
+is made.** The clinic settled the question that was open here: the scope above is *treatment*, and the
+therapy is only booked on a doctor's examination and recommendation. So a caller who says "my child
+has a lazy eye" is offered **a doctor**, not the therapist — the therapy comes after.
+
+This is not left to prompt wording. Two server-side mechanisms carry it:
+
+**`check_availability` announces it.** Whenever a specialty calendar is in the results — whether the
+caller named him or `provider_type: "vision_therapy"` was sent — the response carries a top-level
+`specialty_booking_rule`, and the `note` opens with `READ specialty_booking_rule FIRST`:
+
+```json
+"specialty_booking_rule": {
+  "requires_prior_diagnosis": true,
+  "service": "Consiliere / Terapie psiho-ortoptica",
+  "instruction": "Do NOT offer these slots yet. The clinic requires an eye doctor to examine the caller and recommend this therapy first. …",
+  "doctors_for_diagnosis": ["Dr. Tripon Robert", "Dr. Petrea Alexandra"],
+  "locations_for_diagnosis": ["Tg. Mures, Piata Republicii 5"]
+}
+```
+
+`doctors_for_diagnosis` is the general providers at **his own branch**, so the agent can offer the
+consultation in the same breath (call `check_availability` again with `provider_type: "doctor"` for
+their times). If his branch had no general provider, `locations_for_diagnosis` lists the branches that
+do instead.
+
+**`book_appointment` enforces it.** Booking one of his slots without `diagnosis_confirmed: true` is
+refused with `diagnosis_required`, before `post_schedule.php` is called, so nothing is written:
+
+```json
+{ "success": false, "error": "diagnosis_required",
+  "requested": { "doctor": "Dr. Prof. Szekely Attila", "service": "Consiliere / Terapie psiho-ortoptica",
+                 "date": "2026-09-17", "time": "13:00", "location": "Tg. Mures, Piata Republicii 5" },
+  "message": "NOTHING WAS BOOKED. … Ask the caller whether a doctor has already done so. If not, say the consultation comes first and offer an eye doctor instead …" }
+```
+
+Verified live on 2026-09-16: the refusal fired and all six of his 17 September slots were still free
+afterwards. Ordinary bookings are unaffected — the flag is only consulted when the chosen slot turns
+out to sit on a specialty calendar, so sending it always, or never sending it for normal bookings, both
+work.
+
+**What this means for the prompt.** The agent may still *reach* him — by name, or with
+`provider_type: "vision_therapy"` — and should, because that is how it learns the rule applies. What it
+must not do is offer his times to a caller who has not been diagnosed. The correct shape of that turn
+is: recognise the therapy request → say a consultation with an eye doctor comes first → offer a doctor
+from `doctors_for_diagnosis` → book the therapy on a later call, once the caller confirms they already
+have the diagnosis, with `diagnosis_confirmed: true`.
+
+## Speaking dates — `date_spoken` / `relative_day` (added 2026-09-15)
+
+**Every date any of these tools returns carries two extra fields, and the agent must speak those rather than convert the ISO date itself.**
+
+| Field | Example | Meaning |
+|---|---|---|
+| `date` | `2026-09-16` | the machine date — pass it back to `book_appointment` / `manage_appointment`, never read it aloud |
+| `date_spoken` | `Wednesday 16 September` | weekday + day + month, in English, for the agent to **translate** into the caller's language |
+| `relative_day` | `tomorrow` | one of `today`, `tomorrow`, `the day after tomorrow`, `in N days`, or `IN THE PAST - do not offer this` |
+
+Why it exists: on a live call (2026-09-15 16:16, `conv_4701m2jk8460e2es63a4zbc5j21c`, n8n execution 1409) the webhook returned `earliest 2026-09-16 15:40` and the agent told the caller *"astăzi, marți 15 septembrie, ora 15:40"* — a slot 40 minutes in the **past**. When the caller declined, the next offer, `2026-09-17 10:00`, came out as *"mâine, miercuri 16 septembrie"*. Both were exactly one day early, weekday name included: the LLM was doing ISO→spoken date arithmetic and getting it wrong. n8n's data was correct in both cases, and — because `date_searched_from` was tomorrow — could not have contained anything for today.
+
+The fields above remove the arithmetic. Every `note` / `next_step` / `read_back` string in these responses now also ends with the rule itself:
+
+> *Never work out a date yourself and never re-read the ISO date: say `date_spoken` translated into the caller's language, and say today or tomorrow only when `relative_day` says so.*
+
+Present on: `check_availability` (`earliest`, every `available_days[]` entry, `requested_date_slots`), `find_appointments` and `manage_appointment` (every `appointments[]` / `appointment` entry, and the `read_back` string), `book_appointment` (`booked`, `replaced_appointment`).
+
+**Open on the ElevenLabs side:** nothing in the prompt tells the agent how to speak a date or forbids deriving one — the inline instruction in each tool result is the only thing steering it. One sentence in the appointment flow would close it, e.g. *"When you name a day, say the tool's `date_spoken` in the caller's language; call it today or tomorrow only if `relative_day` says so."*
 
 ## 2. book_appointment
 `POST https://n8n.splitagency.biz.id/webhook/optofarm-book-appointment`
@@ -53,10 +175,11 @@ Call **only after** the caller has confirmed all details out loud (read back nam
 | `time` | string, required | HH:MM 24h (9:00 auto-padded to 09:00) |
 | `doctor` / `location` / `city` | at least one | must resolve to exactly ONE calendar, else `ambiguous_calendar` error with the candidates |
 | `problem` | string, optional | what the patient wants — goes into the API's **observations** field (per Imreh; NOT problemDescription) |
+| `diagnosis_confirmed` | boolean | **required only for the specialty (psycho-orthoptics) calendar**, added 2026-09-16. True only after the caller has said an eye doctor already examined them and recommended the therapy. Booking that calendar without it is refused with `diagnosis_required` and nothing is written. Harmless on any ordinary booking |
 | `email` | string, optional | |
 
-The workflow re-fetches the live slot list and books only if the exact date+time is still free — errors `date_not_available` / `time_not_available` include alternatives to offer the caller.
-Success: `booked{...}` + note that clinic staff will confirm. In evolvo this creates an "agenda insertion" (lead); if name+phone match an existing patient it becomes a real appointment tied to CRM history.
+The workflow re-fetches the live slot list and books only if the exact date+time is still free — errors `date_not_available` / `time_not_available` include alternatives to offer the caller. A slot on the specialty calendar is additionally refused with `diagnosis_required` unless `diagnosis_confirmed` is true; the refusal happens **before** anything is written.
+Success: `booked{...}` (carrying `date`, `date_spoken`, `relative_day`, `time`) + note that clinic staff will confirm. In evolvo this creates an "agenda insertion" (lead); if name+phone match an existing patient it becomes a real appointment tied to CRM history.
 
 ## 3. find_appointments
 `POST https://n8n.splitagency.biz.id/webhook/optofarm-find-appointments`
@@ -71,7 +194,7 @@ Identity check = **the phone number alone**, dictated digit by digit (changed 20
 | `conversation_id` | string, auto | `system__conversation_id`, used for the gate |
 | `full_name` | string, ignored | still accepted for backwards compatibility; it filters nothing |
 
-Success: `found: true`, `count`, `persons[]` and `appointments[]`, each entry `{ref, person, date "YYYY-MM-DD", time "HH:MM", doctor, location, type, state, kind, manageable}` plus a `next_step` sentence telling the agent to read one back and get a yes. `ref` is a short stable handle derived from the record's `scheduleid` — it survives between the find call and the manage call and does not shift when another record appears or disappears. `found: false` means the phone has nothing in the next 31 days; the hint tells the agent to ask about another number and never to ask for a name.
+Success: `found: true`, `count`, `persons[]` and `appointments[]`, each entry `{ref, person, date "YYYY-MM-DD", date_spoken, relative_day, time "HH:MM", doctor, service (specialty only), location, type, state, kind, manageable}` plus a `next_step` sentence telling the agent to read one back and get a yes. `ref` is a short stable handle derived from the record's `scheduleid` — it survives between the find call and the manage call and does not shift when another record appears or disappears. `found: false` means the phone has nothing in the next 31 days; the hint tells the agent to ask about another number and never to ask for a name.
 
 ## 4. manage_appointment
 `POST https://n8n.splitagency.biz.id/webhook/optofarm-manage-appointment`
@@ -110,7 +233,7 @@ Error answers that mean **nothing was changed**: `confirm_appointment_first` (wi
 
 After `reschedule`, the agent runs check_availability + book_appointment for the new slot, reusing the `person` name from the confirmed appointment rather than asking the caller for one.
 
-**Slot release on reschedule (2026-09-14).** evolvo state 3 (`Trebuie reprogramat`) does **not** release the old slot — only state 2 (cancel) does. So `reschedule` marks the record *and remembers it*; the old record is cancelled automatically by `book_appointment` once the replacement booking succeeds, in the same conversation. The booking response then carries `replaced_appointment {ref, person, date, time, doctor, location, cancelled}` and the `note` says the earlier appointment was cancelled and its slot released. **The agent must not call manage_appointment again to cancel the old one** — it is already gone.
+**Slot release on reschedule (2026-09-14).** evolvo state 3 (`Trebuie reprogramat`) does **not** release the old slot — only state 2 (cancel) does. So `reschedule` marks the record *and remembers it*; the old record is cancelled automatically by `book_appointment` once the replacement booking succeeds, in the same conversation. The booking response then carries `replaced_appointment {ref, person, date, date_spoken, time, doctor, location, cancelled}` and the `note` says the earlier appointment was cancelled and its slot released. **The agent must not call manage_appointment again to cancel the old one** — it is already gone.
 
 The hand-off is keyed on `conversation_id` (both tools already send `system__conversation_id`) and additionally requires the booking phone to match the marked appointment's phone — so booking for a *different* number later in the same call never cancels the first person's appointment. If the call ends before a replacement is booked, the record simply stays at `needs_reschedule` holding its slot, which is the safe failure: staff see it and call back. Order matters: **mark first, then book.** Booking before marking leaves the old slot blocked.
 
