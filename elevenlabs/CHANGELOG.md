@@ -4,6 +4,52 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-16 (evening) — "she does not work there": a matched doctor with no free slots
+
+Client report: callers ask for *"Ilovan dr nő"* and the agent answers that she does not work at
+Poștei, only "Ilovan Anica". Traced to `conv_0401m2mx22pveh5tkr6qy9fq3eat` (2026-09-16 13:44, Twilio,
+`qwen35-397b-a17b`).
+
+**The name handling was not the problem.** The caller said `Kilován doktornőhöz szeretnék a Posta
+utcába` — ASR heard *Kilován*, not Ilovan — and the agent sent `{doctor: "Kilován", location:
+"Postei"}`, correctly stripping both the title and the `-höz` case ending. n8n's fuzzy matcher
+resolved it to `Dr. Ilovan Anca` through one character of edit distance. Everything worked.
+
+What it returned was `available_days: []` — she has nothing free in the ~15 working days searched, so
+there is no `earliest` key either. **Nothing in the tool description covered that case.** The five
+documented outcomes are all error codes; a successful match with zero slots was undocumented, so the
+agent invented an explanation: that she does not work at that branch, and that the returned name
+belonged to someone else.
+
+### Applied to `evolvo_check_availability`
+
+Two sentences, plus a rewritten `doctor` parameter description:
+
+- an empty `available_days` means found-but-nothing-free: say so in one sentence, offer a later date
+  or another provider, **never say they do not work there**;
+- a name in `results[]` or `available_doctors` is the person the caller asked for, spelled as the
+  system stores it — use that spelling and never set it against what the caller said as though they
+  were two people;
+- `doctor`: the title-stripping rule now covers where the title actually sits. Romanian puts it in
+  front (`doamna doctor`), Hungarian puts it after the name and glues the case ending on
+  (`Ilovan doktornőhöz`, `Kovács doktor úrhoz`, `doktornőt`, `asszony`).
+
+Nothing added to the system prompt — it already forbids inventing who works at which branch, and the
+agent ignored that. The fix belongs where the result is read.
+
+### Raised with n8n (`n8n/REQUESTS_FROM_ELEVENLABS.md`, 2026-09-16)
+
+1. Make the empty case explicit — a `no_free_slots` flag and a leading `note`, rather than expecting
+   the model to notice an absent array. An empty array is a weak signal for an LLM.
+2. Latent only, not the cause here: `CA Match Calendars`'s list-based `STOP` catches `doktornő` but
+   not `dr nő`, `doktornőhöz`, `doktornőt` or `asszony`. Hungarian is agglutinative, so a word list
+   cannot cover it; a prefix regex would. Simulated against all 30 calendar names.
+3. Not n8n at all — **evolvo's calendar is named `Dr. Ilovan Anca` and the client says her name is
+   `Anica`.** `splitName` only splits on `" - "` and `CA Format Slots` passes `cal.doctor` through
+   untouched, so the agent speaks `Calendars[].name` verbatim. On 2026-09-15 a caller corrected it on
+   air (`conv_9601m2jaxsfje7eandzfxxpafbvt`) and the agent invented `Anika`. Rename it in evolvo;
+   `lev("anica","anca") = 1` so both spellings keep matching and no booking breaks.
+
 ## 2026-09-16 (later) — vision_therapy routing and the diagnosis-first gate wired up
 
 n8n PR #5 added a third calendar kind (`vision_therapy`, the psycho-orthoptics calendar), a

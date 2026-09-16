@@ -5,6 +5,80 @@ from ElevenLabs; this is the other direction. Newest first.
 
 ---
 
+## 2026-09-16 — a matched doctor with nothing free reads as "she does not work there"
+
+From the client: *"sokan vannak, akik úgy telefonálnak, hogy egy programálást kérnek Ilovan dr nőhöz…
+most azt mondja, nem dolgozik Ilovan dr nő a posta utcában, csak Ilovan Anica."*
+
+We traced it. **The matcher is not at fault and neither is the title handling** — both did their job.
+`conv_0401m2mx22pveh5tkr6qy9fq3eat`, 2026-09-16 13:44:
+
+| step | what happened |
+|---|---|
+| caller said | `Kilován doktornőhöz szeretnék a Posta utcába` (ASR turned Ilovan into **Kilován**) |
+| agent sent | `{doctor: "Kilován", location: "Postei"}` — title and case ending correctly stripped |
+| n8n returned | `success: true`, `results: [{doctor: "Dr. Ilovan Anca", location: "Tg. Mures, Str. Postei Nr. 3", available_days: []}]` |
+| agent said | *"Kilován doktornő nem dolgozik a Posta utcában; ott Dr. Ilovan Anca rendel."* |
+
+Your fuzzy match resolved `Kilován` → `Dr. Ilovan Anca` through one character of Levenshtein
+distance. It worked. What broke is the **empty `available_days`**: she has nothing free in the
+~15 working days searched, there is no `earliest` key, and nothing in the payload says what that
+means. The agent had no branch to take and improvised the worst possible one — it told a caller a
+real doctor does not work at a branch where she does, and read the correctly-returned name back as
+though it belonged to a different person.
+
+Fixed on our side: `evolvo_check_availability`'s description now says that an empty `available_days`
+means found-but-nothing-free (say so, offer a later date or another provider, never say they do not
+work there), and that a name coming back in `results[]` or `available_doctors` is the same person the
+caller asked for, spelled as the system stores it.
+
+### 1. Please make the empty case explicit rather than inferable
+
+An empty array is a weak signal for an LLM — it has to notice an absence. A field would be read:
+
+```json
+{ "success": true, "results": [ … ],
+  "no_free_slots": true,
+  "note": "Dr. Ilovan Anca was found at this branch but has no free time in the next ~15 working days. Say so and offer a later date_from or another provider. Do NOT say she does not work here." }
+```
+
+Anything in that shape works; the `note` prefix matters more than the field name, since that is what
+the agent reads first. Same question applies when several calendars match and only some are empty.
+
+### 2. Latent, not the cause here: split and suffixed Hungarian titles in `STOP`
+
+We simulated `CA Match Calendars`'s `words()`/`nameMatch()` against `Dr. Ilovan Anca`. Everything the
+agent actually sends works. But if a title ever reaches you unstripped, the list-based `STOP` only
+catches the glued nominative:
+
+| query | tokens after STOP | result |
+|---|---|---|
+| `Ilovan doktornő` | `["ilovan"]` | MATCH |
+| `Ilovan dr nő` | `["ilovan","no"]` | **NOMATCH** |
+| `Ilovan doktor nő` | `["ilovan","no"]` | **NOMATCH** |
+| `Ilovan doktornőhöz` | `["ilovan","doktornohoz"]` | **NOMATCH** |
+| `Ilovan doktornőt` | `["ilovan","doktornot"]` | **NOMATCH** |
+| `Ilovan asszony` | `["ilovan","asszony"]` | **NOMATCH** |
+| `doamna doctor Ilovan` | `["ilovan"]` | MATCH |
+
+Hungarian is agglutinative, so a fixed word list can never cover the case endings — `doktornőhöz`,
+`doktornőnél`, `doktornőt`, `doktor úrhoz`. A prefix/regex test would, e.g. drop any token matching
+`^(dr|dra|prof|doktor\w*|doctor\w*|doamna|doamnei|domn\w*|medic\w*|dna|dl|asszony\w*|ur|urno\w*|no)$`.
+Cheap insurance; entirely your call whether it is worth touching a working matcher.
+
+### 3. Not n8n — evolvo: the calendar is named `Anca`, the client says `Anica`
+
+`splitName` only splits on `" - "` and `CA Format Slots` passes `cal.doctor` through unchanged, so
+what the agent speaks is exactly `Calendars[].name` from `get_info.php`: **`Dr. Ilovan Anca`**. On
+2026-09-15 a caller corrected the agent on air (*"doamna doctor Ilovan, deci nu Anca"*,
+`conv_9601m2jaxsfje7eandzfxxpafbvt`) and the agent then invented `Anika` — it had nothing better.
+
+Nothing in the pipeline drops the `i`; the calendar itself is misspelt. The fix is renaming it in
+evolvo to `Dr. Ilovan Anica`. Safe to do: `lev("anica","anca") = 1`, so both spellings keep matching
+either way, and no booking that names her breaks.
+
+---
+
 ## 2026-09-15 (later) — ElevenLabs reply: slot_released is wired in. Nothing outstanding.
 
 Answering your 2026-09-14 round. **Nothing is needed from you here** — this is a receipt so the two
