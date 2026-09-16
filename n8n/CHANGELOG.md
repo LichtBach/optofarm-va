@@ -53,6 +53,30 @@ live webhook:
 | `{doctor: "Szekely", location: "Postei"}` | suffixed name in the error | clean name; specialty providers dropped from the branch list |
 | `{location: "Postei"}`, `{doctor: "Baricz Anna"}` | — | unchanged |
 
+**3. Diagnosis first (clinic decision, same day).** The clinic answered the boundary question this
+entry originally left open: **an ordinary eye doctor must examine the caller and recommend the therapy
+before a psycho-orthoptics appointment is made.** Rather than leave that to prompt wording, it is
+enforced in two places.
+
+`CA Match Calendars` builds a `specialty_rule` for any specialty calendar it emits, and
+`CA Format Slots` lifts it to a top-level **`specialty_booking_rule`** and prefixes the `note` with
+`READ specialty_booking_rule FIRST`. The rule carries `requires_prior_diagnosis`, the `service`, the
+instruction, and **`doctors_for_diagnosis`** — the general providers at his own branch, so the agent
+can offer the consultation immediately (with `locations_for_diagnosis` as the fallback if his branch
+had no general provider).
+
+`BOOK Validate Input` accepts **`diagnosis_confirmed`**, and `BOOK Find Slot` refuses a slot on a
+specialty calendar without it — error **`diagnosis_required`**, returned *before* `post_schedule.php`
+runs, so nothing is written. The gate keys off the winning slot's `service`, so it fires whether the
+caller was routed by name or by `provider_type`, and every ordinary booking is untouched (no `service`
+on the slot → no check).
+
+Dry-run first, then live: `{provider_type: "vision_therapy"}` returns the rule with both Republicii
+doctors listed; `{location: "Republicii"}` carries no rule and the ordinary `note`; a real
+`book_appointment` for his 2026-09-17 13:00 slot without the flag came back `diagnosis_required` and
+all six of his slots that day were still free afterwards. Rollback for these four nodes:
+[`diagnosis-gate-nodes-rollback-2026-09-16.json`](diagnosis-gate-nodes-rollback-2026-09-16.json).
+
 His scope — and therefore when the agent should ask for `vision_therapy` — is written up in
 [`../api-docs/ELEVENLABS_TOOLS.md`](../api-docs/ELEVENLABS_TOOLS.md) under "The specialty provider".
 Rollback bodies for the eight nodes:

@@ -91,9 +91,55 @@ stroke, or learning-and-focus difficulties — or asks for him by name.
 photography, general check-ups, eye disease, or anything urgent. Those are `doctor` or `optometrist`,
 and the server will no longer let an unfiltered search drift onto him.
 
-One boundary worth confirming with the clinic rather than assuming: whether a caller reporting an
-**undiagnosed** squint or lazy eye should go to him directly, or to a doctor first for the diagnosis
-and then to therapy. The scope text above describes treatment, not diagnosis.
+### Diagnosis first — the clinic's rule (confirmed 2026-09-16), enforced server-side
+
+**A caller must see an ordinary eye doctor and get a diagnosis before a psycho-orthoptics appointment
+is made.** The clinic settled the question that was open here: the scope above is *treatment*, and the
+therapy is only booked on a doctor's examination and recommendation. So a caller who says "my child
+has a lazy eye" is offered **a doctor**, not the therapist — the therapy comes after.
+
+This is not left to prompt wording. Two server-side mechanisms carry it:
+
+**`check_availability` announces it.** Whenever a specialty calendar is in the results — whether the
+caller named him or `provider_type: "vision_therapy"` was sent — the response carries a top-level
+`specialty_booking_rule`, and the `note` opens with `READ specialty_booking_rule FIRST`:
+
+```json
+"specialty_booking_rule": {
+  "requires_prior_diagnosis": true,
+  "service": "Consiliere / Terapie psiho-ortoptica",
+  "instruction": "Do NOT offer these slots yet. The clinic requires an eye doctor to examine the caller and recommend this therapy first. …",
+  "doctors_for_diagnosis": ["Dr. Tripon Robert", "Dr. Petrea Alexandra"],
+  "locations_for_diagnosis": ["Tg. Mures, Piata Republicii 5"]
+}
+```
+
+`doctors_for_diagnosis` is the general providers at **his own branch**, so the agent can offer the
+consultation in the same breath (call `check_availability` again with `provider_type: "doctor"` for
+their times). If his branch had no general provider, `locations_for_diagnosis` lists the branches that
+do instead.
+
+**`book_appointment` enforces it.** Booking one of his slots without `diagnosis_confirmed: true` is
+refused with `diagnosis_required`, before `post_schedule.php` is called, so nothing is written:
+
+```json
+{ "success": false, "error": "diagnosis_required",
+  "requested": { "doctor": "Dr. Prof. Szekely Attila", "service": "Consiliere / Terapie psiho-ortoptica",
+                 "date": "2026-09-17", "time": "13:00", "location": "Tg. Mures, Piata Republicii 5" },
+  "message": "NOTHING WAS BOOKED. … Ask the caller whether a doctor has already done so. If not, say the consultation comes first and offer an eye doctor instead …" }
+```
+
+Verified live on 2026-09-16: the refusal fired and all six of his 17 September slots were still free
+afterwards. Ordinary bookings are unaffected — the flag is only consulted when the chosen slot turns
+out to sit on a specialty calendar, so sending it always, or never sending it for normal bookings, both
+work.
+
+**What this means for the prompt.** The agent may still *reach* him — by name, or with
+`provider_type: "vision_therapy"` — and should, because that is how it learns the rule applies. What it
+must not do is offer his times to a caller who has not been diagnosed. The correct shape of that turn
+is: recognise the therapy request → say a consultation with an eye doctor comes first → offer a doctor
+from `doctors_for_diagnosis` → book the therapy on a later call, once the caller confirms they already
+have the diagnosis, with `diagnosis_confirmed: true`.
 
 ## Speaking dates — `date_spoken` / `relative_day` (added 2026-09-15)
 
@@ -129,9 +175,10 @@ Call **only after** the caller has confirmed all details out loud (read back nam
 | `time` | string, required | HH:MM 24h (9:00 auto-padded to 09:00) |
 | `doctor` / `location` / `city` | at least one | must resolve to exactly ONE calendar, else `ambiguous_calendar` error with the candidates |
 | `problem` | string, optional | what the patient wants — goes into the API's **observations** field (per Imreh; NOT problemDescription) |
+| `diagnosis_confirmed` | boolean | **required only for the specialty (psycho-orthoptics) calendar**, added 2026-09-16. True only after the caller has said an eye doctor already examined them and recommended the therapy. Booking that calendar without it is refused with `diagnosis_required` and nothing is written. Harmless on any ordinary booking |
 | `email` | string, optional | |
 
-The workflow re-fetches the live slot list and books only if the exact date+time is still free — errors `date_not_available` / `time_not_available` include alternatives to offer the caller.
+The workflow re-fetches the live slot list and books only if the exact date+time is still free — errors `date_not_available` / `time_not_available` include alternatives to offer the caller. A slot on the specialty calendar is additionally refused with `diagnosis_required` unless `diagnosis_confirmed` is true; the refusal happens **before** anything is written.
 Success: `booked{...}` (carrying `date`, `date_spoken`, `relative_day`, `time`) + note that clinic staff will confirm. In evolvo this creates an "agenda insertion" (lead); if name+phone match an existing patient it becomes a real appointment tied to CRM history.
 
 ## 3. find_appointments

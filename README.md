@@ -177,8 +177,21 @@ appointment). See [`n8n/CHANGELOG.md`](n8n/CHANGELOG.md) and
    stroke, or learning-and-focus difficulties — and never offer him for glasses, contact lenses, eye
    pressure, OCT, general check-ups, eye disease or anything urgent. His full scope is in
    [`api-docs/ELEVENLABS_TOOLS.md`](api-docs/ELEVENLABS_TOOLS.md) under "The specialty provider".
-   One boundary to confirm with the clinic: whether an **undiagnosed** squint or lazy eye goes to him
-   directly or to a doctor first — the scope text describes treatment, not diagnosis.
+   **Diagnosis first — answered by the clinic 2026-09-16, and now enforced server-side.** An ordinary
+   eye doctor must examine the caller and recommend the therapy *before* a psycho-orthoptics
+   appointment is made. So "my child has a lazy eye" is offered **a doctor**, not the therapist.
+   `check_availability` returns a top-level `specialty_booking_rule` whenever he is in the results —
+   with `doctors_for_diagnosis` naming the general providers at his own branch so you can offer the
+   consultation in the same turn — and the `note` opens with `READ specialty_booking_rule FIRST`.
+   `book_appointment` refuses his slots with `diagnosis_required` unless `diagnosis_confirmed: true`
+   is sent, and that refusal happens before anything is written (verified live: his six 17 Sept slots
+   were still free after a refused attempt).
+   So the prompt should still *reach* him — by name or `provider_type: "vision_therapy"` — because
+   that is how it learns the rule applies. What it must not do is offer his times to an undiagnosed
+   caller. The shape of that turn: recognise the therapy request → say a doctor's consultation comes
+   first → offer a doctor from `doctors_for_diagnosis` → book the therapy on a later call with
+   `diagnosis_confirmed: true` once the caller confirms they already have the diagnosis.
+   `diagnosis_confirmed` needs adding to the `evolvo_book_appointment` tool schema.
 
 ### Open — n8n side, answered 2026-09-14
 
