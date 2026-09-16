@@ -4,6 +4,44 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-16 — knowledge base: pszicho-ortoptika / gimnastica oculară added
+
+New section 24 in both operational FAQ documents, plus a price line in section 2. Live and mirrored
+in `elevenlabs/knowledge-base/`.
+
+| document | id | before | after |
+|---|---|---|---|
+| Hungarian FAQ | `l7TG9P3XnTjgRThXelU5` | 10,959 B | 12,733 B |
+| Romanian FAQ | `zynIEChUpgg4AaEbZInG` | 10,852 B | 12,709 B |
+
+### What was added
+
+The service is performed by **Dr. Prof. Székely Attila**, a *pszicho-ortoptikus*, and costs **70 lei**.
+It is called `pszicho-ortoptika` (also `szemtorna`) in Hungarian and `gimnastica oculară` (also
+`psiho-ortoptică`) in Romanian; each document names the other language's term so a caller can be
+understood either way. The description text is the client's, with the emojis stripped as requested and
+the bullet list kept.
+
+Two house-style guards were added on top of the supplied copy, matching how every other section in
+these documents is written:
+
+- say one or two sentences exactly as written and stop — no promised results, no "who needs it", no
+  number of sessions, no treatment length;
+- which branch Dr. Prof. Székely Attila works at and when comes only from the booking system, never
+  from memory (section 23's existing rule, restated here because this is the first section that names
+  a member of staff).
+
+### Open points
+
+- The copy contains medical claims (stroke recovery, dementia/Alzheimer progression, learning
+  difficulties). They are recorded verbatim because the client supplied them as facts about the
+  service; the guard above stops the agent elaborating on them, but they are worth a second look.
+- The title is recorded as given, `Dr. Prof. Székely Attila`. Romanian and Hungarian convention would
+  normally be `Prof. Dr.`.
+- Nothing was changed on the booking side: `provider_type` still only has `doctor` and `optometrist`,
+  so a caller asking to book eye gymnastics has no route to this specialist yet. Needs an evolvo
+  calendar and a decision on how the availability lookup should target him.
+
 ## 2026-09-15 (evening, 6) — tool descriptions and built-in tool descriptions shortened; procedures audited
 
 Two parallel read-only audits (tools, procedures), then the tool-side cuts applied. Live Main is now
