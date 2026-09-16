@@ -160,6 +160,26 @@ appointment). See [`n8n/CHANGELOG.md`](n8n/CHANGELOG.md) and
    and evolvo rejects a non-future `date_from`, so **no slot it returns is ever today** — if the agent
    ever says "today", it has misread the data, and a same-day appointment simply cannot be offered.
 
+6. **The psycho-orthoptics provider needs a prompt rule (raised 2026-09-16, n8n side done).**
+   `Dr. Prof. Szekely Attila  - Consiliere / Terapie psiho-ortoptica` (Republicii) is the only
+   calendar of 30 that is not general eye care, and he *was* the earliest free slot at that branch —
+   so "the soonest appointment in town centre" offered a psycho-orthoptics counsellor to a caller who
+   wanted glasses.
+   **n8n side is done:** his name is split into a speakable `doctor` plus a separate `service`, and he
+   is now excluded from every search unless the caller **named him** or the tool is called with
+   `provider_type: "vision_therapy"` (which works with no location too, since there is only one such
+   calendar). `provider_type: "doctor"` and unfiltered searches no longer reach him, and he is kept
+   out of every `available_doctors` / `matching_doctors` / `available_provider_types` list so he
+   cannot be offered out of an error payload either.
+   **What is needed from your side:** the routing rule. He is already in the knowledge base, but
+   nothing makes the tool call ask for him. Send `provider_type: "vision_therapy"` for squint, lazy
+   eye, eye exercises / *szemtorna*, vision therapy, binocular coordination, vision rehab after a
+   stroke, or learning-and-focus difficulties — and never offer him for glasses, contact lenses, eye
+   pressure, OCT, general check-ups, eye disease or anything urgent. His full scope is in
+   [`api-docs/ELEVENLABS_TOOLS.md`](api-docs/ELEVENLABS_TOOLS.md) under "The specialty provider".
+   One boundary to confirm with the clinic: whether an **undiagnosed** squint or lazy eye goes to him
+   directly or to a doctor first — the scope text describes treatment, not diagnosis.
+
 ### Open — n8n side, answered 2026-09-14
 
 Both open questions from [`elevenlabs/qa-followups.md`](elevenlabs/qa-followups.md) have been

@@ -3,6 +3,68 @@
 Newest first. Every entry is a change to the live workflow **Optofarm - WIP**
 (`jLUnlrt9zM8VWZvp`) on `https://n8n.splitagency.biz.id`.
 
+## 2026-09-16 — the psycho-orthoptics calendar: split its name, and hide it unless asked for
+
+Two problems with the one calendar of 30 whose service lives in its **name**:
+`Dr. Prof. Szekely Attila  - Consiliere / Terapie psiho-ortoptica` (Republicii, 30-min slots,
+afternoons only; note the double space).
+
+**1. The agent read the suffix out loud.** `doctor` was the whole calendar name, so a caller heard
+*"Doctor Professor Szekely Attila minus Consiliere slash Terapie psiho-ortoptica"* — and that string
+also went back into `book_appointment`. `splitName()` in `CA Match Calendars` and
+`BOOK Match Calendars` now yields `doctor` (the speakable name) and `service` (the suffix), and
+`service` is carried through `CA Format Slots`, `BOOK Find Slot` and `BOOK Format Booking` onto
+results, `earliest`, `requested_date_slots` and `booked`. The same splitter runs over evolvo's
+`medic` field in `FIND Format Results` and `MAN Find Target`, so a cancel read-back cannot say it
+either. He is the **only** suffixed calendar, so for the other 29 the output is unchanged — there is
+no `service` key at all when there is no suffix.
+
+Checked against all 30 live names: every clean name still matches its own calendar, and the matcher
+resolves `Szekely Attila`, `Székely Attila`, `Szekely`, `Prof. Szekely Attila`, ASR variants
+(`Sekely Atila`, `Szekely Atila`) and the full suffixed string to the same single calendar — so
+booking works with whichever form the agent sends.
+
+**2. He was the default answer for Republicii.** `providerKind()` classified him `doctor` off the
+`Dr.` prefix, and with 13:00 slots he was the `earliest` free slot at that branch — so
+*"the soonest appointment in town centre"* offered a psycho-orthoptics counsellor to a caller who
+wanted glasses. A name with a service suffix is now its own kind (`vision_therapy` when the service
+matches `/ortopt/`, otherwise `specialty`), and a **specialty gate** in `CA Match Calendars` drops
+such calendars from every search except when the caller named the person or sent that exact
+`provider_type`. `CA Validate Input` whitelists `vision_therapy` and normalises separators, so
+`vision therapy` and `vision-therapy` land on the same value.
+
+He is also kept out of `available_doctors`, `doctors_at_requested_location`, `matching_doctors` and
+`available_provider_types`, so the agent cannot offer him out of an error payload. A branch that had
+*only* a specialty provider now answers with the new `only_specialty_providers_here` error (carrying
+`other_locations`) rather than the misleading `no_match`. `provider_type: "vision_therapy"` also
+works with **no** location, since there is exactly one such calendar — so the `missing_target` guard
+no longer fires for that case.
+
+Twelve cases were dry-run against the live calendar list before the push, then re-run against the
+live webhook:
+
+| request | before | after |
+|---|---|---|
+| `{location: "Republicii"}` | earliest = Szekely 13:00 | earliest = Dr. Tripon Robert 13:30, Szekely absent |
+| `{location: "Republicii", provider_type: "doctor"}` | included Szekely | Tripon + Petrea only |
+| `{location: "Republicii", provider_type: "vision_therapy"}` | — | Szekely only, with `service` |
+| `{provider_type: "vision_therapy"}` (no location) | `missing_target` | Szekely only |
+| `{doctor: "Szekely Attila"}` | full suffixed name | `"Dr. Prof. Szekely Attila"` + `service` |
+| `{doctor: "Szekely", location: "Postei"}` | suffixed name in the error | clean name; specialty providers dropped from the branch list |
+| `{location: "Postei"}`, `{doctor: "Baricz Anna"}` | — | unchanged |
+
+His scope — and therefore when the agent should ask for `vision_therapy` — is written up in
+[`../api-docs/ELEVENLABS_TOOLS.md`](../api-docs/ELEVENLABS_TOOLS.md) under "The specialty provider".
+Rollback bodies for the eight nodes:
+[`specialty-gate-nodes-rollback-2026-09-16.json`](specialty-gate-nodes-rollback-2026-09-16.json).
+
+**Related, not done:** `problem_description` from `get_info.php` is a newline-separated service list
+(`Prescriere ochelari`, `Tensiune oculara`, `Retinofotografie`, `Discromatie`, …) populated on **16 of
+the 30 calendars** and not surfaced by any tool today. Exposing it as `services[]` would give the
+prompt real clinic data for visit-reason routing instead of name-prefix heuristics. Szekely's is
+empty, as are the eight `ai_*` fields on all 30 calendars — the clinic filling those in is the proper
+fix, and `ai_public_names_hu/ro/en` would also solve spoken provider names generally.
+
 ## 2026-09-15 — `date_spoken` / `relative_day`: the agent was offering slots in the past
 
 Reported from a live call: the agent offered a time 40 minutes in the **past**. n8n was not at fault
