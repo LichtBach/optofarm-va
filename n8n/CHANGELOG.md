@@ -3,6 +3,56 @@
 Newest first. Every entry is a change to the live workflow **Optofarm - WIP**
 (`jLUnlrt9zM8VWZvp`) on `https://n8n.splitagency.biz.id`.
 
+## 2026-09-16 (later) — `no_free_slots`, and titles by stem instead of by list
+
+Both asked for by the ElevenLabs side in [`REQUESTS_FROM_ELEVENLABS.md`](REQUESTS_FROM_ELEVENLABS.md)
+after a client report: the agent told callers that *Ilovan doktornő* does not work at Postei, where
+she does. Their trace cleared the matcher and the title handling — `Kilován` (as ASR heard it) was
+resolved to `Dr. Ilovan Anca` correctly. What broke was the payload for **found, but nothing free**:
+`available_days: []`, no `earliest` key, and nothing saying what that means. The agent improvised.
+
+**`no_free_slots`.** `CA Format Slots` marks every empty result with `no_free_slots: true`, sets the
+same flag at the top level when *no* matched provider has a free slot, and puts the explanation
+**first** in `note` — the agent reads the note first, so that is where it has to be:
+
+> NO FREE SLOTS: Dr. Ilovan Anca (Tg. Mures, Str. Postei Nr. 3) was found and does work there, but has
+> no free time from 2026-09-17 to the end of the ~15 working days searched. Say exactly that, then
+> offer a later date … NEVER tell the caller they do not work there …
+
+The mixed case is a different answer: when some providers have times and some do not, the top-level
+flag stays **absent** (there is an `earliest`, so the call is answerable) and the note opens
+`PARTLY FREE: …`. A calendar whose lookup *failed* keeps its own `error: "no_availability_data"` and
+is deliberately not counted as `no_free_slots` — found-but-full and could-not-check are different
+answers. Verified live on all four shapes: the failing call, the raw Hungarian form of it,
+`{location: "Postei"}` (Ilovan flagged, other four untouched, `earliest` = Dr. Popa Camelia) and
+`{location: "Republicii"}` (no marker, ordinary note).
+
+**Titles: `STOP` list → stem regex.** The old word list only caught a title in the glued nominative,
+so `Ilovan dr nő`, `Ilovan doktornőhöz`, `Ilovan doktornőt` and `Ilovan asszony` all lost the match —
+Hungarian puts the title *after* the name and declines it. `words()` in `CA Match Calendars` and
+`BOOK Match Calendars` now drops any token matching a title stem (`doktor[a-z]*`, `doctor[a-z]*`,
+`doamn[a-z]*`, `domn[a-z]*`, `medic[a-z]*`, `asszony[a-z]*`, `urno[a-z]*`, `profesor[a-z]*` …), with
+the short ambiguous ones (`dr`, `dna`, `dl`, `prof`) kept exact.
+
+Two details worth not rediscovering. `[a-z]*` not `\w*`: tokens are already lowercase `a-z0-9`, and
+`\w` inside a JS **string** literal (this regex is built with `new RegExp`, not a literal) silently
+collapses to `w` — my first attempt shipped exactly that and the regression test caught it, with the
+`\w*` alternatives all dead. And `ur` / `no` are enumerated (`urhoz`, `urnak`, `nohoz`, `novel`, …)
+rather than prefixed, because `ur[a-z]*` would swallow a future provider called **Urban**.
+
+Proven before the push by diffing old against new over all 30 calendar names, every workstation and
+every branch alias: place matching identical, every calendar name still resolving to exactly the same
+set, no token newly stripped anywhere except `prof` from Szekely's name. One intended behaviour
+change: **a bare title no longer matches anybody** — `prof` alone used to resolve to Szekely.
+
+Rollback for the three nodes:
+[`nofreeslots-titles-rollback-2026-09-16.json`](nofreeslots-titles-rollback-2026-09-16.json).
+
+**Not n8n — the `Anca` / `Anica` spelling.** Confirmed their finding: `get_info.php` returns
+`Dr. Ilovan Anca` and nothing in the pipeline drops the `i`. The calendar itself is misspelt. I ran
+both spellings through the live matcher against the current and renamed name: identical matches in
+both directions, so the clinic can rename it in the evolvo admin panel with nothing to fix afterwards.
+
 ## 2026-09-16 — the psycho-orthoptics calendar: split its name, and hide it unless asked for
 
 Two problems with the one calendar of 30 whose service lives in its **name**:

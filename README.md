@@ -193,6 +193,19 @@ appointment). See [`n8n/CHANGELOG.md`](n8n/CHANGELOG.md) and
    `diagnosis_confirmed: true` once the caller confirms they already have the diagnosis.
    `diagnosis_confirmed` needs adding to the `evolvo_book_appointment` tool schema.
 
+### Open — for the clinic (not either agent)
+
+- **Rename the `Dr. Ilovan Anca` calendar to `Dr. Ilovan Anica`** in the evolvo admin panel. The
+  calendar name is what the agent speaks, and it is misspelt: a caller corrected the agent on air on
+  2026-09-15 (`conv_9601m2jaxsfje7eandzfxxpafbvt`). Verified safe — both spellings match either way
+  through the n8n matcher, so nothing breaks and no booking that names her is affected.
+- **Populate `ai_public_names_hu` / `_ro` / `_en`** (empty on all 30 calendars). They give a spoken
+  form per language, clinic-maintained, and would retire the name-guessing on both sides — see
+  question 11 in [`api-docs/QUESTIONS_FOR_IMREH.md`](api-docs/QUESTIONS_FOR_IMREH.md).
+- **Fill in `problem_description` for the 14 calendars where it is blank** (it is a real service list
+  on the other 16). That is the clean input for visit-reason routing, replacing the name-prefix
+  heuristic.
+
 ### Open — n8n side, answered 2026-09-14
 
 Both open questions from [`elevenlabs/qa-followups.md`](elevenlabs/qa-followups.md) have been
