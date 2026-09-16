@@ -150,6 +150,7 @@ Gimnastica oculară, numită și psiho-ortoptică, este efectuată de Dr. Prof. 
 - Tratamentul psiho-ortoptic dezvoltă, prin stimuli vizuali interactivi, fixația, mișcarea ochilor, coordonarea ochi–mână, vederea periferică și timpul de reacție.
 - Dincolo de funcționarea mușchilor oculari, specialistul nostru urmărește și prelucrarea informației vizuale la nivelul creierului, precum și refacerea colaborării dintre cei doi ochi.
 - Se adresează copiilor și adulților cu strabism, ambliopie sau probleme de coordonare a vederii, la care scopul este creșterea acuității vizuale și întărirea ochiului slab, așa-numitul ochi leneș.
+- Tratamentul se programează numai după ce un medic oftalmolog a consultat pacientul și a recomandat terapia. Pentru strabism sau ochi leneș prima programare se face ÎNTOTDEAUNA la un medic oftalmolog, nu aici; gimnastica oculară vine abia după recomandarea medicului.
 
 La ce mai ajută gimnastica oculară:
 - Dezvoltă reflexele și memoria vizuală.

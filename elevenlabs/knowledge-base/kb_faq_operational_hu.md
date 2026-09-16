@@ -150,6 +150,7 @@ Románul ugyanez a szolgáltatás „gimnastica oculară”, és „psiho-ortopt
 - A pszicho-ortoptikai kezelés interaktív vizuális ingerekkel fejleszti a fixációt, a szemmozgást, a szem–kéz koordinációt, a perifériás látást és a reakcióidőt.
 - A szakemberünk a szemizmok működésén túl a vizuális információ agyi feldolgozását és a kétszemes együttműködés helyreállítását is célozza.
 - Kancsalsággal, tompalátással vagy koordinációs látásproblémákkal élő gyermekeknek és felnőtteknek szól, akiknél cél a látásélesség növelése és a gyenge, úgynevezett lusta szem erősítése.
+- A kezelést csak akkor rögzítjük, ha szemorvos megvizsgálta a pácienst és javasolta a terápiát. Kancsalság vagy lusta szem miatt elsőként MINDIG szemorvoshoz kell időpont, nem ide; a szemtorna csak az orvosi javaslat után következik.
 
 Miben segít még a szemtorna:
 - Fejleszti a reflexeket és a vizuális memóriát.

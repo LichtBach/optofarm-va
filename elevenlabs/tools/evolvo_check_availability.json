@@ -1,46 +1,47 @@
 {
-  "name": "evolvo_check_availability",
-  "description": "Look up real free appointment slots. Call it once, only when you know where (a branch or doctor the caller named, or the city Reghin or Sovata) and what the visit is for; call again only for something the caller changes. Never invent a place to get the call through: with no branch, doctor or single-branch city, send none and you get missing_target, the safe result - ask which branch or doctor, wait, call again. Targu Mures alone is never a place. Do not use it for branch facts, addresses or hours; those come from the knowledge base. Send doctor and branch as the caller said them; spelling differences are tolerated. Returns results[] per provider+location calendar with provider_type (doctor or optometrist: title the person by this field, never by the name), available_days[] (date YYYY-MM-DD, date_spoken, relative_day, free_times[] HH:MM 24h), slot_duration_minutes, and earliest (date, date_spoken, relative_day, time, doctor, location, provider_type), the single earliest slot across all matches: offer exactly that to urgent, soonest or no-preference callers. Dates: say date_spoken translated, say today or tomorrow only when relative_day is exactly that word, never read or convert the YYYY-MM-DD date; the search starts tomorrow, so nothing returned is today. When date_from was sent, requested_date_status is available or not_available and requested_date_slots holds that day's first free times. Offer one day and one or two times, once. Errors: missing_target - ask which branch or doctor and call again. doctor_not_at_location - say where that doctor works (doctor_locations) or offer doctors_at_requested_location, then call again. no_match - if the name you sent had a leading word you were unsure of, retry with surname and forename alone; otherwise offer at most three of available_doctors / available_locations and call again. no_provider_of_type - the branch has nobody of that kind: say so in one sentence, then call again with the same provider_type and no location, and offer the earliest slot it returns, naming its branch. Never offer a doctor at the original branch instead; look at that branch without provider_type only if the caller says they cannot travel. too_many_matches - ask the caller to narrow doctor or location and call again. Slots change quickly: book right after the caller accepts.",
-  "parameters": {
-    "doctor": {
-      "type": "string",
-      "description": "The provider's name only, as the caller said it: 'Baricz Anna', 'Baricz Ana' or just 'Baricz' (partial or misspelt is fine, diacritics ignored, Dr./Optometrist prefix optional). One wrong word fails the whole match, so strip any title the caller used (doamna doctor, doktor ur, domnul), strip the Hungarian particle ifj. / ifjabb / ifjabbik, and drop any leading word you are not confident you heard: from 'ifjabbik Jeremias Laszlohoz' send 'Jeremias Laszlo'. If two people share the name, ask which and say 'Ifj.' aloud for the younger. Leave out if the caller named nobody.",
-      "enum": null
-    },
-    "provider_type": {
-      "type": "string",
-      "description": "Which kind of provider the visit needs, decided by what the visit is for; send it whenever the reason is known and the caller named nobody. 'optometrist' only when the caller's words point at glasses or dioptres: making, changing or replacing glasses, checking whether dioptres changed, a check-up explicitly tied to dioptres ('control de dioptrii', 'dioptriaellenorzes'). 'doctor' for everything else: any symptom, disease or complaint, OCT, eye pressure, screening, anything urgent, a child, a bare check-up ('un control', 'kontroll' with nothing further), and anything you are unsure about - doctor is the safe default. Leave out when the caller named a person or the reason is not known yet. It narrows a search, it does not target one: sent alone it returns missing_target. Sent without a doctor name, results[] and earliest hold only that kind and provider_type_filter is echoed; check the provider_type of the slot you offer. A named doctor always wins: sent with a doctor name, that person comes back unfiltered and no provider_type_filter is echoed - offer that slot normally, never treat it as a mismatch.",
-      "enum": [
-        "doctor",
-        "optometrist"
-      ]
-    },
-    "location": {
-      "type": "string",
-      "description": "The branch the caller named. Leave out when they have not named one - never pick one yourself, and never carry over a branch you only mentioned while listing locations. Also leave out when retrying after no_provider_of_type.",
-      "enum": [
-        "Fortuna",
-        "Postei",
-        "Trandafirilor",
-        "Doja",
-        "Republicii",
-        "Bulevard",
-        "Reghin",
-        "Sovata"
-      ]
-    },
-    "city": {
-      "type": "string",
-      "description": "Only Reghin or Sovata, and only when the caller named it. Targu Mures is not accepted (six branches: ask which and send it as location). Leave out when the caller named a branch or a doctor.",
-      "enum": [
-        "Reghin",
-        "Sovata"
-      ]
-    },
-    "date_from": {
-      "type": "string",
-      "description": "Earliest acceptable date, YYYY-MM-DD, only when the caller named a date or period (for 'on 9 December' send 2026-12-09). Must be after today. Leave out for as soon as possible (the search starts tomorrow).",
-      "enum": null
-    }
+ "name": "evolvo_check_availability",
+ "description": "Look up real free appointment slots. Call it once, only when you know where (a branch or doctor the caller named, or the city Reghin or Sovata) and what the visit is for; call again only for something the caller changes. Never invent a place to get the call through: with no branch, doctor or single-branch city, send none and you get missing_target, the safe result - ask which branch or doctor, wait, call again. Targu Mures alone is never a place. Do not use it for branch facts, addresses or hours; those come from the knowledge base. Send doctor and branch as the caller said them; spelling differences are tolerated. Returns results[] per provider+location calendar with provider_type (doctor, optometrist or vision_therapy: title the person by this field, never by the name), available_days[] (date YYYY-MM-DD, date_spoken, relative_day, free_times[] HH:MM 24h), slot_duration_minutes, and earliest (date, date_spoken, relative_day, time, doctor, location, provider_type), the single earliest slot across all matches: offer exactly that to urgent, soonest or no-preference callers. If the response carries specialty_booking_rule, read it before anything else and do NOT offer those slots: that therapy is booked only on an eye doctor's recommendation. Say in one sentence that a consultation with an eye doctor comes first, then offer one of the people in doctors_for_diagnosis - call again with provider_type doctor for their times. Dates: say date_spoken translated, say today or tomorrow only when relative_day is exactly that word, never read or convert the YYYY-MM-DD date; the search starts tomorrow, so nothing returned is today. When date_from was sent, requested_date_status is available or not_available and requested_date_slots holds that day's first free times. Offer one day and one or two times, once. Errors: missing_target - ask which branch or doctor and call again. doctor_not_at_location - say where that doctor works (doctor_locations) or offer doctors_at_requested_location, then call again. no_match - if the name you sent had a leading word you were unsure of, retry with surname and forename alone; otherwise offer at most three of available_doctors / available_locations and call again. no_provider_of_type - the branch has nobody of that kind: say so in one sentence, then call again with the same provider_type and no location, and offer the earliest slot it returns, naming its branch. Never offer a doctor at the original branch instead; look at that branch without provider_type only if the caller says they cannot travel. only_specialty_providers_here - that branch has nobody but a specialty provider: say so and offer another branch. too_many_matches - ask the caller to narrow doctor or location and call again. Slots change quickly: book right after the caller accepts.",
+ "parameters": {
+  "doctor": {
+   "type": "string",
+   "description": "The provider's name only, as the caller said it: 'Baricz Anna', 'Baricz Ana' or just 'Baricz' (partial or misspelt is fine, diacritics ignored, Dr./Optometrist prefix optional). One wrong word fails the whole match, so strip any title the caller used (doamna doctor, doktor ur, domnul), strip the Hungarian particle ifj. / ifjabb / ifjabbik, and drop any leading word you are not confident you heard: from 'ifjabbik Jeremias Laszlohoz' send 'Jeremias Laszlo'. If two people share the name, ask which and say 'Ifj.' aloud for the younger. Leave out if the caller named nobody.",
+   "enum": null
+  },
+  "provider_type": {
+   "type": "string",
+   "description": "Which kind of provider the visit needs, decided by what the visit is for; send it whenever the reason is known and the caller named nobody. 'optometrist' only when the caller's words point at glasses or dioptres: making, changing or replacing glasses, checking whether dioptres changed, a check-up explicitly tied to dioptres ('control de dioptrii', 'dioptriaellenorzes'). 'vision_therapy' only for the psycho-orthoptic therapy itself, asked for by name: szemtorna, gimnastica oculara, psiho-ortoptica, pszicho-ortoptika, eye exercises, vision therapy, binocular coordination training, vision rehabilitation after a stroke, learning or focusing difficulties. Never send it for glasses, lenses, eye pressure, OCT, a check-up, eye disease or anything urgent, and never for a first look at a squint or a lazy eye - that is a doctor, and the therapy only follows a doctor's recommendation. 'doctor' for everything else: any symptom, disease or complaint, OCT, eye pressure, screening, anything urgent, a child, a bare check-up ('un control', 'kontroll' with nothing further), and anything you are unsure about - doctor is the safe default. Leave out when the caller named a person or the reason is not known yet. It narrows a search, it does not target one: sent alone it returns missing_target, except vision_therapy, which works without a location. Sent without a doctor name, results[] and earliest hold only that kind and provider_type_filter is echoed; check the provider_type of the slot you offer. A named doctor always wins: sent with a doctor name, that person comes back unfiltered and no provider_type_filter is echoed - offer that slot normally, never treat it as a mismatch.",
+   "enum": [
+    "doctor",
+    "optometrist",
+    "vision_therapy"
+   ]
+  },
+  "location": {
+   "type": "string",
+   "description": "The branch the caller named. Leave out when they have not named one - never pick one yourself, and never carry over a branch you only mentioned while listing locations. Also leave out when retrying after no_provider_of_type.",
+   "enum": [
+    "Fortuna",
+    "Postei",
+    "Trandafirilor",
+    "Doja",
+    "Republicii",
+    "Bulevard",
+    "Reghin",
+    "Sovata"
+   ]
+  },
+  "city": {
+   "type": "string",
+   "description": "Only Reghin or Sovata, and only when the caller named it. Targu Mures is not accepted (six branches: ask which and send it as location). Leave out when the caller named a branch or a doctor.",
+   "enum": [
+    "Reghin",
+    "Sovata"
+   ]
+  },
+  "date_from": {
+   "type": "string",
+   "description": "Earliest acceptable date, YYYY-MM-DD, only when the caller named a date or period (for 'on 9 December' send 2026-12-09). Must be after today. Leave out for as soon as possible (the search starts tomorrow).",
+   "enum": null
   }
+ }
 }

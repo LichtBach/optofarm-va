@@ -4,6 +4,62 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-16 (later) — vision_therapy routing and the diagnosis-first gate wired up
+
+n8n PR #5 added a third calendar kind (`vision_therapy`, the psycho-orthoptics calendar), a
+`specialty_booking_rule` block on `check_availability`, and a server-side `diagnosis_required` refusal
+on `book_appointment`. None of it was reachable from the agent: `provider_type` was a hard enum of
+`["doctor","optometrist"]`, and `book_appointment` had no `diagnosis_confirmed` parameter. Both fixed.
+
+| what | before | after |
+|---|---|---|
+| `evolvo_check_availability` `provider_type` enum | doctor, optometrist | + vision_therapy |
+| `evolvo_book_appointment` params | 12 | 13 (`diagnosis_confirmed`, optional boolean) |
+| system prompt | 19,738 chars | 20,128 (+390, three sentences) |
+| HU knowledge base | 12,733 B | 12,983 B |
+| RO knowledge base | 12,709 B | 12,985 B |
+
+Live agent version `agtvrsn_6101m2naaff5e3svbanyp75kn8bk`; the LLM field read `qwen35-397b-a17b` at
+write time (switched in the UI since the last entry — the tool cuts were regression-tested on
+`gpt-5.6-luna`).
+
+### Where each piece of the rule lives
+
+Deliberately spread thin, because the prompt is the expensive place to put anything:
+
+- **Which visits route to the therapist** — `provider_type` parameter description only. The booking
+  procedure already says to work `provider_type` out "exactly as the tool's description defines it",
+  so the trigger list costs nothing per turn beyond the tool schema that was already there. It names
+  szemtorna / gimnastica oculara / psiho-ortoptica and the rest, and explicitly excludes a *first*
+  look at a squint or lazy eye — that is a doctor.
+- **What to do when the rule fires** — tool description (`specialty_booking_rule` → do not offer,
+  consultation first, offer from `doctors_for_diagnosis`) and the `diagnosis_required` error clause.
+- **The prompt** — three sentences in `# Doctors and optometrists`, only the part that prevents harm
+  if everything else is ignored: vision_therapy exists, the clinic books it only on a doctor's
+  recommendation, do not offer those times, book only when the caller says a doctor recommended it.
+- **Knowledge base** — one bullet in section 24 of each document. This corrects a routing hint added
+  earlier the same day: that section lists strabism / ambliopie among what the therapy addresses,
+  which on its own could push a lazy-eye enquiry to the therapist. It now says the first appointment
+  for those is ALWAYS an ophthalmologist.
+
+Also added: the `only_specialty_providers_here` error, and the note that `vision_therapy` is the one
+`provider_type` that works without a location.
+
+### Already done, contrary to the PR
+
+PR #5 lists "a date rule" as open on the ElevenLabs side — *"nothing in the prompt tells the agent how
+to speak a date or forbids deriving one"*. The `# The clock and the calendar` section added in the
+prompt compression does exactly that: `date_spoken` translated, `relative_day` for today/tomorrow,
+never derive a weekday, never read the ISO date, do not offer `IN THE PAST`. That item can be closed.
+
+### Still open
+
+- `diagnosis_confirmed` is untested end to end. The refusal path was verified live by n8n; the
+  *accepting* path (a therapy booking with the flag set) has not been exercised from the agent.
+- The procedure text still walks a caller through name/phone before booking without knowing the slot
+  is a specialty one, so the `diagnosis_required` refusal arrives after the details are collected.
+  Recoverable — the error says to ask and re-call — but it spends turns.
+
 ## 2026-09-16 — knowledge base: pszicho-ortoptika / gimnastica oculară added
 
 New section 24 in both operational FAQ documents, plus a price line in section 2. Live and mirrored

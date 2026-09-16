@@ -1,66 +1,71 @@
 {
-  "name": "evolvo_book_appointment",
-  "description": "Book a real appointment on a date and time the caller has just accepted from evolvo_check_availability. Two preconditions: (1) you offered this exact day and time and the caller said yes - send slot_accepted true; (2) you read the phone number back digit by digit and the caller answered yes in a later turn - send phone_confirmed true. If either has not happened, do not call yet; once both have, call straight away. Also needs a real full name (never a placeholder) and the accepted doctor or branch, date and time; the system re-checks the slot is still free. offer_slot_first: nothing booked - offer the day and time, ask if it suits, end your turn, then call again with slot_accepted true. confirm_phone_first: nothing booked - read the number in read_back back, ask if it is correct, end your turn, then call again with phone_confirmed true. success true means the appointment is made whatever booking_mode says (appointment_linked_to_existing_patient and lead_pending_staff_confirmation are internal; to the caller both are simply booked): say it is registered for that weekday, date and time, then the reminder sentence; never say a colleague will ring back about it. If the response carries replaced_appointment, this booking completed a reschedule and the earlier appointment was already handled: with cancelled true, say in one sentence the appointment has been moved from the old day and time to the new one; with cancelled false, say the new time is booked and a colleague will tidy up the earlier one. Either way never call evolvo_manage_appointment to cancel the old one. date_not_available or time_not_available: the slot went - say so in one short sentence, offer one of alternative_days / free_times_that_day, and on the yes call again at once without asking for name or phone again. ambiguous_calendar: ask the caller to pick one of the listed doctor+location pairs. ambiguous_patient: ask for the full name exactly as registered with Optofarm and call again. Say booked only when success is true.",
-  "parameters": {
-    "full_name": {
-      "type": "string",
-      "description": "The caller's full name as given and confirmed (last version if they corrected themselves). For a reschedule, the person name exactly as evolvo_find_appointments spelled it; do not ask for it again.",
-      "enum": null
-    },
-    "phone": {
-      "type": "string",
-      "description": "Digits only as dictated, no spaces, no leading zero or country code added or removed. For a reschedule it must be the number the appointment was found on, or the old one is not cancelled.",
-      "enum": null
-    },
-    "phone_confirmed": {
-      "type": "boolean",
-      "description": "true only if you read this exact number back digit by digit and the caller answered yes in a later turn; otherwise false. Never guess: a wrong true books on a wrong number.",
-      "enum": null
-    },
-    "slot_accepted": {
-      "type": "boolean",
-      "description": "true only if you spoke this exact day and time to the caller and they said it suits; otherwise false. Never guess.",
-      "enum": null
-    },
-    "date": {
-      "type": "string",
-      "description": "Accepted date, YYYY-MM-DD, exactly as returned by evolvo_check_availability.",
-      "enum": null
-    },
-    "time": {
-      "type": "string",
-      "description": "Accepted time, HH:MM 24h, exactly as returned by evolvo_check_availability.",
-      "enum": null
-    },
-    "doctor": {
-      "type": "string",
-      "description": "Provider of the accepted slot exactly as the availability result spelled it, prefix included. At least one of doctor or location.",
-      "enum": null
-    },
-    "location": {
-      "type": "string",
-      "description": "Branch keyword from the availability lookup: Fortuna, Postei, Trandafirilor, Doja, Republicii, Bulevard, Reghin, Sovata.",
-      "enum": null
-    },
-    "city": {
-      "type": "string",
-      "description": "City, only if that is all the caller gave.",
-      "enum": null
-    },
-    "problem": {
-      "type": "string",
-      "description": "What the caller wants, one short sentence for a colleague (glasses, OCT, check-up, eye pressure, a described problem, a child). For a reschedule say so, e.g. 'reschedule of the appointment on <old date>'.",
-      "enum": null
-    },
-    "email": {
-      "type": "string",
-      "description": "Only if the caller volunteered one; otherwise leave out.",
-      "enum": null
-    },
-    "conversation_id": {
-      "type": "string",
-      "description": "",
-      "enum": null
-    }
+ "name": "evolvo_book_appointment",
+ "description": "Book a real appointment on a date and time the caller has just accepted from evolvo_check_availability. Two preconditions: (1) you offered this exact day and time and the caller said yes - send slot_accepted true; (2) you read the phone number back digit by digit and the caller answered yes in a later turn - send phone_confirmed true. If either has not happened, do not call yet; once both have, call straight away. Also needs a real full name (never a placeholder) and the accepted doctor or branch, date and time; the system re-checks the slot is still free. offer_slot_first: nothing booked - offer the day and time, ask if it suits, end your turn, then call again with slot_accepted true. confirm_phone_first: nothing booked - read the number in read_back back, ask if it is correct, end your turn, then call again with phone_confirmed true. success true means the appointment is made whatever booking_mode says (appointment_linked_to_existing_patient and lead_pending_staff_confirmation are internal; to the caller both are simply booked): say it is registered for that weekday, date and time, then the reminder sentence; never say a colleague will ring back about it. If the response carries replaced_appointment, this booking completed a reschedule and the earlier appointment was already handled: with cancelled true, say in one sentence the appointment has been moved from the old day and time to the new one; with cancelled false, say the new time is booked and a colleague will tidy up the earlier one. Either way never call evolvo_manage_appointment to cancel the old one. date_not_available or time_not_available: the slot went - say so in one short sentence, offer one of alternative_days / free_times_that_day, and on the yes call again at once without asking for name or phone again. diagnosis_required: nothing was booked - that slot is the psycho-orthoptic therapy, which the clinic books only on an eye doctor's recommendation. Ask whether a doctor has already examined the caller and recommended it: if yes, call again with diagnosis_confirmed true; if no, say in one sentence that the consultation comes first and offer an eye doctor instead. ambiguous_calendar: ask the caller to pick one of the listed doctor+location pairs. ambiguous_patient: ask for the full name exactly as registered with Optofarm and call again. Say booked only when success is true.",
+ "parameters": {
+  "full_name": {
+   "type": "string",
+   "description": "The caller's full name as given and confirmed (last version if they corrected themselves). For a reschedule, the person name exactly as evolvo_find_appointments spelled it; do not ask for it again.",
+   "enum": null
+  },
+  "phone": {
+   "type": "string",
+   "description": "Digits only as dictated, no spaces, no leading zero or country code added or removed. For a reschedule it must be the number the appointment was found on, or the old one is not cancelled.",
+   "enum": null
+  },
+  "phone_confirmed": {
+   "type": "boolean",
+   "description": "true only if you read this exact number back digit by digit and the caller answered yes in a later turn; otherwise false. Never guess: a wrong true books on a wrong number.",
+   "enum": null
+  },
+  "slot_accepted": {
+   "type": "boolean",
+   "description": "true only if you spoke this exact day and time to the caller and they said it suits; otherwise false. Never guess.",
+   "enum": null
+  },
+  "diagnosis_confirmed": {
+   "type": "boolean",
+   "description": "Only for a psycho-orthoptic therapy slot, and only true when the caller has said an eye doctor has already examined them and recommended the therapy. Leave it out of every ordinary booking. Never guess: without it a therapy slot is refused with diagnosis_required and nothing is written, and a wrong true books a therapy nobody prescribed.",
+   "enum": null
+  },
+  "date": {
+   "type": "string",
+   "description": "Accepted date, YYYY-MM-DD, exactly as returned by evolvo_check_availability.",
+   "enum": null
+  },
+  "time": {
+   "type": "string",
+   "description": "Accepted time, HH:MM 24h, exactly as returned by evolvo_check_availability.",
+   "enum": null
+  },
+  "doctor": {
+   "type": "string",
+   "description": "Provider of the accepted slot exactly as the availability result spelled it, prefix included. At least one of doctor or location.",
+   "enum": null
+  },
+  "location": {
+   "type": "string",
+   "description": "Branch keyword from the availability lookup: Fortuna, Postei, Trandafirilor, Doja, Republicii, Bulevard, Reghin, Sovata.",
+   "enum": null
+  },
+  "city": {
+   "type": "string",
+   "description": "City, only if that is all the caller gave.",
+   "enum": null
+  },
+  "problem": {
+   "type": "string",
+   "description": "What the caller wants, one short sentence for a colleague (glasses, OCT, check-up, eye pressure, a described problem, a child). For a reschedule say so, e.g. 'reschedule of the appointment on <old date>'.",
+   "enum": null
+  },
+  "email": {
+   "type": "string",
+   "description": "Only if the caller volunteered one; otherwise leave out.",
+   "enum": null
+  },
+  "conversation_id": {
+   "type": "string",
+   "description": "",
+   "enum": null
   }
+ }
 }
