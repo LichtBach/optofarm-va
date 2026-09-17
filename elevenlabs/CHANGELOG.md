@@ -4,6 +4,27 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-17 — knowledge base: Dr. Tripon Robert consults in English
+
+One line added to section 23 of both FAQ documents (HU 12,983 → 13,243 B; RO 12,985 → 13,290 B):
+Dr. Tripon Robert's English is good enough to consult in, so an English-speaking caller can be
+pointed to him.
+
+Put in section 23 rather than a new one because that section already governs how the agent talks
+about who works here. Two guards came with it, both shaped by rules already in that section and in
+the prompt's "What you know" list:
+
+- **It is the only language fact the agent has about anyone.** The line says so explicitly, so the
+  agent cannot generalise into "Dr. X speaks German" for a provider it knows nothing about — the same
+  failure mode as inventing a specialisation, which section 23 already forbids.
+- **No branch is named.** Where he works and when still comes only from the booking system; the fact
+  is about the person, not a location. He appears at Republicii and Bulevard in live availability
+  results, but writing that down would hard-code a rota the agent is told never to hold in memory.
+
+Nothing added to the system prompt or the tools. An English-speaking caller already reaches him
+through the ordinary flow, and the fact is retrieved (both documents are `usage_mode: auto`, so this
+costs nothing per turn).
+
 ## 2026-09-16 (evening) — "she does not work there": a matched doctor with no free slots
 
 Client report: callers ask for *"Ilovan dr nő"* and the agent answers that she does not work at
