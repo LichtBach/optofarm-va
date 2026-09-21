@@ -37,6 +37,17 @@ Every result, plus `earliest` and `requested_date_slots`, also carries `provider
 
 Errors: `no_match` (includes `available_doctors`/`available_locations` to offer — the agent offers at most three), `too_many_matches` (ask caller to narrow down), `doctor_not_at_location` (the doctor exists but not at the requested branch; carries `doctor_locations[]` and `doctors_at_requested_location[]`), and `no_provider_of_type` (the branch has no provider of the requested kind — e.g. Fortuna has no optometrist).
 
+**Provider names and branch addresses are display-corrected on the way out (2026-09-21).** Evolvo
+stores all 16 provider names and all 8 addresses with diacritics stripped; four terminal nodes
+rewrite them in every response, success and error alike. You receive `Dr. Ilovan Anica`
+(a corrected *given name*, not a diacritic), `Dr. Prof. Székely Attila`, `Optometrist Bódi Ildikó`,
+`Optometrist Ifj. Jeremiás László`, `Optometrist Jeremiás Zoltán`, and `Tg. Mureș, Str. Poștei Nr. 3`
+style addresses. **No field was added, removed or renamed.** Corrected strings may be sent straight
+back into any tool — the matcher strips diacritics on both sides and tolerates the `Anca`/`Anica`
+edit; verified live. Romanian provider names (`Ormenisan`, `Zait`) deliberately stay stripped, and
+abbreviations are deliberately not expanded (`Tg.` stays `Tg.`) because expanding them breaks
+matching. Details: [`../n8n/HANDOVER-2026-09-21.md`](../n8n/HANDOVER-2026-09-21.md).
+
 **How provider type is decided:** off the calendar-name prefix. Verified live on 2026-09-14 across all 30 calendars — 21 `Dr. …`, 9 `Optometrist …`, none unmatched. Every non-doctor is *explicitly* prefixed `Optometrist`; nothing is identified by the absence of "Dr.". The list is not static (it was 16 calendars on 2026-09-11), so re-verify after clinic changes. The mapping from *reason for the visit* to provider type is a prompt-side decision and is not made here — n8n only filters on what it is asked for.
 
 ## 2. book_appointment
