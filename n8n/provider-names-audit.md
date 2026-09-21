@@ -64,3 +64,31 @@ be chosen deliberately rather than discovered after the clinic has retyped 16 na
 `Székely` and `Szekely` are the same token to it, and a caller saying either still matches. Restoring
 diacritics cannot break the fuzzy matcher. Confirmed by reading the live node source, not the stale
 export in this repo.
+
+---
+
+## Decided 2026-09-21 — corrected in n8n, not in evolvo
+
+The clinic's call: **Anca → Anica, and Hungarian names get their diacritics back. Nothing else
+changes.** Romanian names keep their stripped spellings deliberately (`Ormenisan`, `Zait` stay as
+they are), so questions 6 and 12 above are closed as "leave it".
+
+Shipped as four `Display Names` nodes in the live workflow — see the
+[changelog](CHANGELOG.md) and [`display-names.node.js`](display-names.node.js). The five strings that
+change:
+
+| raw in evolvo | returned to ElevenLabs |
+|---|---|
+| `Dr. Ilovan Anca` | `Dr. Ilovan Anica` |
+| `Dr. Prof. Szekely Attila  - Consiliere / Terapie psiho-ortoptica` | `Dr. Prof. Székely Attila - Consiliere / Terapie psiho-ortoptica` |
+| `Optometrist Bodi Ildiko` | `Optometrist Bodi Ildikó` |
+| `Optometrist Ifj Jeremias Laszlo` | `Optometrist Ifj. Jeremiás László` |
+| `Optometrist Jeremias Zoltan` | `Optometrist Jeremiás Zoltán` |
+
+**Evolvo is never written to**, which retires the "does evolvo normalise on save?" risk entirely —
+it no longer matters what evolvo does with diacritics, because we never send any.
+
+**The pronunciation dictionaries can now be built.** The blocker was that an alias keys on the
+grapheme the TTS actually receives; that grapheme is now settled and stable, because it is produced
+by a map in our own workflow rather than by whatever the clinic last typed into evolvo. Key the
+dictionaries on the right-hand column above.

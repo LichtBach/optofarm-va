@@ -3,6 +3,37 @@
 Newest first. Every entry is a change to the live workflow **Optofarm - WIP**
 (`jLUnlrt9zM8VWZvp`) on `https://n8n.splitagency.biz.id`.
 
+## 2026-09-21 — corrected provider names returned to ElevenLabs, 122 → **126 nodes**
+
+Evolvo stores all 16 provider names with diacritics stripped. Rather than have the clinic retype
+them (and risk evolvo normalising them straight back on save), the correction is applied on the way
+out, in n8n. Evolvo is never written to.
+
+- **Four new Code nodes** — `CA / BOOK / FIND / MAN Display Names` — each wired downstream of both
+  that branch's happy path and its `Error Out`, so all four are now the webhook responders. Source
+  in [`display-names.node.js`](display-names.node.js); the four copies are identical.
+- **Five names change**, per the clinic's decision: `Dr. Ilovan Anca` → `Anica` (a wrong given name,
+  not a diacritic), and Hungarian diacritics restored on `Székely Attila`, `Ildikó`,
+  `Ifj. Jeremiás László` (also the missing period) and `Jeremiás Zoltán`. The other eleven are
+  returned untouched — Romanian names keep their stripped spellings, deliberately.
+- **Applied at the last node and nowhere else.** The obvious place is `splitName`, and it would have
+  been a silent bug: `MAN rel Find Calendar` matches a cancelled appointment back to its calendar
+  with `norm(c.name) === norm(a.doctor)`, an *exact* equality after diacritic stripping. Diacritics
+  survive it; `Anica` vs `Anca` does not. Rewriting upstream would have turned every
+  `slot_release_status` into `unknown` with nothing visibly breaking.
+- **Scoped to name-bearing keys** (`doctor`, `available_doctors`, `doctors_at_requested_location`,
+  `matching_doctors`, `specialty_providers`, `calendar_name`), not a blind walk over every string —
+  a patient legitimately called `Jeremias Zoltan` must not be rewritten. Verified.
+- **Round-trip is safe.** The agent may echo a corrected name straight back into a tool:
+  `CA/BOOK Match Calendars` NFD-normalise and strip combining marks on both sides, and `Anca`→`Anica`
+  is one edit against a Levenshtein budget of 2. All 16 names plus `Kilován` and
+  `Ilovan Anica doktornőhöz` tested against the live matcher — 14/14 pass.
+- **Fails open.** Any exception passes the item through untouched; an unrecognised provider name is
+  logged, never raised. A cosmetic rewrite must never drop a call.
+
+**Still open:** `Optometrist Bodi Ildiko` ships as `Bodi Ildikó` — `Ildikó` is certain, `Bodi` vs
+`Bódi` is two different surnames and nobody has confirmed which. One-character fix when they do.
+
 ## 2026-09-14 (evening) — `slot_released`, and the cancel path from 7 evolvo calls to 3
 
 Answers the round in [`REQUESTS_FROM_ELEVENLABS.md`](REQUESTS_FROM_ELEVENLABS.md). 115 → **122 nodes**.
