@@ -4,6 +4,83 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-21 (later) — branch transfer numbers; per-language pronunciation confirmed possible
+
+Live version `agtvrsn_6801m31zd8a9ezgswdem1wszynqs`.
+
+### Transfers: one personal number replaced by nine branch routes
+
+`+40770355391` (a personal number used for testing) is **gone from the agent config entirely** —
+verified by grepping the full returned config for `770355391`: zero occurrences. In its place, nine
+conditional transfers:
+
+| condition | number |
+|---|---|
+| medical eye emergency, whatever branch was mentioned | +40 265 212 304 |
+| caller asks for Poștei / Posta utca | +40 265 212 304 |
+| Bulevard, 1 Decembrie 1918 nr. 49 | +40 265 263 351 |
+| Fortuna, 1 Decembrie 1918 nr. 182-184 | +40 265 265 205 |
+| Trandafirilor / Rózsák tere nr. 53 | +40 265 250 120 |
+| Doja / Dózsa György utca nr. 64-68 | +40 265 212 212 |
+| Reghin / Szászrégen, Școlii nr. 11 | +40 265 512 042 |
+| Sovata / Szováta, Principală nr. 196 | +40 265 577 282 |
+| no branch named, or Republicii — general | +40 265 212 304 |
+
+Each condition names the branch in both languages, because a Hungarian caller says *Posta utca*
+and *Rózsák tere*, not the Romanian street names.
+
+**Republicii has no number of its own.** The client's list enumerated seven branches plus a general
+number; Republicii (`+40 365 430 939` in the knowledge base, note the 0365 prefix) was not among
+them. Rather than invent an eighth entry from the knowledge base, the general number's condition
+names Republicii explicitly, so those callers land on Poștei instead of nowhere. **Confirm whether
+this was deliberate.**
+
+The tool description now covers destination choice, and widens the trigger by exactly one case: the
+caller asking in so many words to be put through to a named branch. It still forbids transferring in
+place of a booking the agent can make, or in place of a callback request. Whether the agent should
+also transfer for order status, stock and prices — things it currently logs as callbacks — is a
+product decision that has not been made.
+
+### The caller still hears the handoff summary, and that cannot be fixed on this plan
+
+`require_acceptance: true` is the lever that keeps a warm-transfer summary private: the colleague
+answers, hears it, and only then is the caller bridged in. Setting it returns **403**:
+
+```
+authorization_error / feature_not_available
+"Call screening on transfers requires feature access. Please contact support."
+status: transfer_screening_not_enabled, param: require_acceptance
+```
+
+So on this workspace the two requirements — keep the summary, and keep the caller from hearing it —
+are not jointly satisfiable. The only alternative available without the feature is
+`transfer_type: "blind"`, which removes the summary rather than hiding it, leaving a colleague to
+pick up an emergency with no context at all. Left on `conference` / `require_acceptance: false`
+pending a decision; `enable_client_message` stays true so the caller hears a waiting message rather
+than silence.
+
+### Pronunciation: option A confirmed viable, dictionaries not yet built
+
+Probed live and it works: `pronunciation_dictionary_locators` is **accepted and persisted inside a
+language preset's TTS override**, not only on the base agent. It now sits as an empty array in
+`language_presets.hu.overrides.tts` and `.en.overrides.tts`, next to the `voice_id` override the
+Hungarian preset already had.
+
+That was the whole gating question. A single workspace-wide dictionary could not have solved this,
+because one fixed alias cannot be correct in both languages — it would only move the mispronunciation
+from one set of names to the other.
+
+Not done, and blocked here: the dictionaries themselves. The MCP server exposes no
+pronunciation-dictionary tools and this session has no REST key, so the `.pls` files have to go in
+through the dashboard. Starter files and the full reasoning are in `elevenlabs/pronunciation/`, with
+three caveats stated plainly there: the name lists cover 14 of ~30 calendars, nothing has been
+listened to, and **evolvo strips diacritics from calendar names** (`Szekely`, `Laszlo`,
+`Ormenisan`), which degrades pronunciation even within the matching language and dictates what the
+aliases must be keyed on.
+
+Option C — `doctor_spoken_ro` / `doctor_spoken_hu` from n8n, the `date_spoken` pattern — is recorded
+as the fallback, not being built.
+
 ## 2026-09-21 — Sovata hours corrected; promotions split into their own documents
 
 Live agent version `agtvrsn_2301m31p2hvzfk9vsy74xvrc34gw`. Knowledge base goes from 5 documents to 7.
