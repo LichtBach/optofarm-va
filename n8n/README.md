@@ -142,12 +142,19 @@ Gotchas worth not rediscovering:
   response**. If you append nodes to a branch tail, the new final node becomes the responder and must
   emit the full response body.
 - Code nodes break n8n's paired-item chain, so `$('Node').item` fails downstream — use `.first()`.
-- The redacted export here is refreshed from the live `PUT` response. Keep it in sync.
+- **Refreshing the export: dump only `name`, `nodes`, `connections`, `settings`** — the same shape
+  the `PUT` takes. A raw `GET /workflows/<id>` returns three things that must never land in this
+  public repo: `staticData`, which holds the **live evolvo session token**; `activeVersion`, a full
+  mirror of `nodes` (so a secret redacted from `nodes` alone survives there); and `shared`, which
+  carries the owner's account details. Nothing else needs redacting — as of 2026-09-21 every evolvo
+  call authenticates through the `Evolvo API Key` credential, and the only other `Authorization`
+  headers are runtime expressions referencing a session token, not secrets.
 
 ## Files
 
-- [`Optofarm-WIP.workflow.json`](Optofarm-WIP.workflow.json) — redacted export of the live workflow
-  (credentials stripped). 115 nodes.
+- [`Optofarm-WIP.workflow.json`](Optofarm-WIP.workflow.json) — export of the live workflow,
+  **126 nodes, current as of 2026-09-21**. Credential *references* are kept (names and ids are not
+  secrets); no credential value has ever been resolved into it.
 - [`CHANGELOG.md`](CHANGELOG.md) — dated record of what changed and why.
 - [`slot-release-and-reschedule.md`](slot-release-and-reschedule.md) — the 2026-09-14 investigation
   and fix, with the measurements.
