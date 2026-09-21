@@ -5,6 +5,78 @@ from ElevenLabs; this is the other direction. Newest first.
 
 ---
 
+## 2026-09-21 — please stop calling Optofarm a clinic in tool responses
+
+Direct instruction from the client, ahead of a smoke test: *"MAKE SURE we have no mention of this
+being a clinic at all in any language."*
+
+Optica Optofarm is **an optician's** — *optică* in Romanian, *optika* in Hungarian. It is not a
+clinic, a surgery, a practice or a hospital, and a caller who hears *"clinica vă va confirma"* or
+*"a klinika visszahívja"* is being told something untrue about what kind of business they rang.
+
+### What we did on the ElevenLabs side
+
+Everything we own is clean as of today. Verified by grepping the whole live agent config and every
+attached knowledge base document:
+
+| Object | What changed |
+|---|---|
+| System prompt | `"The clinic books it only on an eye doctor's recommendation"` → `"Optofarm books it only…"`. The guardrail was widened (see below). |
+| `kb_glossary_ro` / `_hu` / `_en` | E2 and H1 entries no longer say *medicii clinicii* / *a klinika orvosai* / *the clinic's doctors*. EN G4 now reads *"to optometrists, medical practices, and optical stores"*. |
+| `kb_faq_operational_ro` / `_hu` | Section 20 (B2B) reworded: RO *"către optici, cabinete medicale și magazine de optică"*, HU *"optikáknak, orvosi rendelőknek és optikai üzleteknek"*. |
+| `evolvo_book_appointment` description | The `diagnosis_required` clause now says *"which Optofarm books only on an eye doctor's recommendation"*. |
+| Promotions documents | Already clean, re-checked. |
+
+The prompt guardrail now reads, in full:
+
+> Optica Optofarm is an optician's (optică, optika), never a clinic, surgery or hospital, in any
+> language. If a tool result, a note or a knowledge base entry uses the word clinic, do not repeat
+> it: say Optofarm, the branch, or the colleagues there.
+
+That last sentence exists **because of the strings below**. It is a backstop, not a fix — it asks the
+LLM to silently correct its own input on every turn, and an LLM that is told *"Tell the caller the
+clinic will confirm it"* will sometimes do exactly that. Please remove the cause.
+
+### What we need from you — 11 strings in the live workflow
+
+These are not comments. Every one of them is a value the agent receives and is, in most cases,
+explicitly instructed to read out. Workflow `jLUnlrt9zM8VWZvp`, `versionId` as of
+2026-09-21T14:50Z — which is the state your refreshed export in
+[`Optofarm-WIP.workflow.json`](Optofarm-WIP.workflow.json) already captures, so the node names below
+can be grepped there directly. In each case the fix is the same: **say "Optofarm", "the branch",
+"our colleagues" or nothing at all — never "the clinic".**
+
+| # | Node | Current text | Suggested |
+|---|---|---|---|
+| 1 | `CA Match Calendars` | `instruction: 'Do NOT offer these slots yet. The clinic requires an eye doctor to examine the caller…'` | `'…Optofarm requires an eye doctor to examine the caller…'` |
+| 2 | `CA Format Slots` | `'…it is the same person, spelled as the clinic stores it.'` | `'…spelled as the booking system stores it.'` |
+| 3 | `BOOK Format Booking` | `note: 'Booking registered as a request. Tell the caller the clinic will confirm it.'` | `'…Tell the caller a colleague will confirm it.'` |
+| 4 | `BOOK Resched Done` | `'…could NOT be cancelled - tell the caller the clinic will remove the old one.'` | `'…tell the caller a colleague will remove the old one.'` |
+| 5 | `BOOK Match Patient` | `hint: 'Ask the caller for their full name exactly as registered at the clinic, then call again.'` | `'…exactly as registered at Optofarm, then call again.'` |
+| 6 | `MAN Find Target` | `message: 'The clinic API does not expose the id needed to modify this appointment. Tell the caller the clinic staff will handle the change…'` | `'The booking system does not expose the id… Tell the caller a colleague will handle the change…'` |
+| 7 | `LOG Format` | `message: 'Request logged for the clinic team; a colleague will call the patient back…'` | `'Request logged for the Optofarm team; …'` |
+| 8–11 | `CA Store Token`, `BOOK Store Token`, `FIND Store Token`, `MAN Store Token` | `hint: 'Could not authenticate to the clinic system. Tell the caller to try again shortly.'` | `'Could not authenticate to the booking system. …'` (identical string in all four) |
+
+Numbers 1, 3, 4, 6 and 7 are the urgent ones — they contain the words *"Tell the caller"*, so the
+agent is being asked to speak them. 8–11 only surface on an auth failure, but that is exactly the
+moment a caller is already unhappy.
+
+### Lower priority — JS comments
+
+`CA Match Calendars`, `CA Format Slots`, `BOOK Validate Input`, `BOOK Find Slot` and the four
+`* Display Names` nodes carry comments like *"(clinic decision)"*, *"clinic's call"* and *"the clinic
+renamed a calendar"*. These never leave n8n and cannot be spoken, so they are cosmetic. Worth
+changing to *"Optofarm"* next time those nodes are edited, so nobody reintroduces the word by copying
+a nearby line — but nothing breaks if they stay.
+
+### Please don't reintroduce it
+
+Any new `note`, `hint`, `message` or `instruction` field is read aloud or near enough. The rule for
+new strings: the business is an optician's, and the people the caller will speak to are *colleagues
+at the branch*, not *clinic staff*.
+
+---
+
 ## 2026-09-16 — a matched doctor with nothing free reads as "she does not work there"
 
 From the client: *"sokan vannak, akik úgy telefonálnak, hogy egy programálást kérnek Ilovan dr nőhöz…

@@ -4,6 +4,66 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-21 (night, after the dictionary upload) — "no mention of this being a clinic, in any language"
+
+The client's instruction before smoke-testing, verbatim: *"MAKE SURE we have no mention of this being
+a clinic at all in any language."* Optica Optofarm is an optician's — *optică*, *optika*. Not a
+clinic, not a surgery, not a hospital.
+
+This is the first time the three glossary documents have been mirrored into this repository at all.
+They were live-only until now, which is part of why the word survived there so long: nothing in the
+repo could be grepped for it.
+
+### What the word was doing, and where
+
+| Object | Before | After |
+|---|---|---|
+| System prompt, line 58 | *The clinic books it only on an eye doctor's recommendation* | *Optofarm books it only on an eye doctor's recommendation* |
+| `kb_glossary_ro` E2 | *efectuate de medicii clinicii* | *efectuate de medicii Optofarm* |
+| `kb_glossary_hu` E2 | *a klinika orvosai végzik* | *az Optofarm orvosai végeznek* |
+| `kb_glossary_en` E2 | *performed by the clinic's doctors* | *performed by Optofarm's doctors* |
+| `kb_glossary_ro` H1 | *oferit de clinică* | *oferit de Optofarm* |
+| `kb_glossary_hu` H1 | *hogy a klinika végzi-e* | *hogy az Optofarm végzi-e* |
+| `kb_glossary_en` H1 | *whether the clinic offers* | *whether Optofarm offers* |
+| `kb_glossary_en` G4 | *to optometrists, clinics, and optical stores* | *to optometrists, medical practices, and optical stores* |
+| `kb_faq_operational_ro` §20 | *livrează direct din fabrică către optici și clinici și distribuie în toată țara* | *livrează direct din fabrică, în calitate de furnizor, către optici, cabinete medicale și magazine de optică din toată țara* |
+| `kb_faq_operational_hu` §20 | *közvetlenül a gyárból szállít optikáknak és klinikáknak, és országszerte terjeszt* | *beszállítóként, közvetlenül a gyárból szállít optikáknak, orvosi rendelőknek és optikai üzleteknek országszerte* |
+| `evolvo_book_appointment` description | *which the clinic books only on…* | *which Optofarm books only on…* |
+
+The two FAQ §20 lines are a judgement call and easy to reverse. They describe who the lens factory
+sells to in the B2B channel, and *clinici* there was arguably correct — Optofarm's wholesale
+customers really may include clinics. But the sentence sits inside a document about Optofarm, one
+paragraph away from Optofarm's own address list, and a caller half-listening hears the word next to
+the business's name. *Cabinete medicale* / *orvosi rendelők* says the same thing about the customer
+without lending the word to Optofarm. If the client prefers the original, only that one line changes.
+
+### The guardrail, and why it had to be widened
+
+It previously only said Optofarm is an optician's. It now also tells the agent what to do when
+something it reads says otherwise:
+
+> Optica Optofarm is an optician's (optică, optika), never a clinic, surgery or hospital, in any
+> language. If a tool result, a note or a knowledge base entry uses the word clinic, do not repeat
+> it: say Optofarm, the branch, or the colleagues there.
+
+The second sentence is there because **eleven strings in the live n8n workflow still say it**, and we
+cannot edit them from this side. Five of those strings begin *"Tell the caller…"* — the workflow is
+literally instructing the agent to say *the clinic*. They are catalogued node by node, with
+suggested replacements, in [`../n8n/REQUESTS_FROM_ELEVENLABS.md`](../n8n/REQUESTS_FROM_ELEVENLABS.md).
+Until they change, the guardrail is asking the model to silently correct its own input on every turn,
+which is a weaker guarantee than not having the word in the input.
+
+### Verification
+
+Not "I edited the files" — the live objects were re-fetched and grepped afterwards:
+
+- Whole live agent config (216 KB of JSON: prompt, first messages, all tool descriptions, language
+  presets, workflow nodes) → the only matches are *clinic*, *clinic* and *hospital* inside the
+  guardrail sentence itself. Nothing else, in any language.
+- All seven attached knowledge base documents re-fetched from the API and grepped for
+  `clinic|klinik|clinică|clinica|kórház|spital` → zero hits.
+- All three glossaries and both FAQ documents diffed byte-for-byte against the repository mirrors.
+- All three procedures (`booking`, `cancel_or_reschedule`, `escalate_to_human`) checked; already clean.
 ## 2026-09-21 (night) — pronunciation dictionaries uploaded and attached
 
 `ro-voice.pls` (20 rules) → `conversation_config.tts`, id `AaMtnNwhZIwuKDy7zI1m` version

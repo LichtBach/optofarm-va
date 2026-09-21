@@ -125,7 +125,7 @@ Firma are propria fabrică de lentile și poate produce orice lentilă specială
 
 ## 20. B2B, angro și parteneriate
 
-Firma livrează direct din fabrică către optici și clinici și distribuie în toată țara.
+Firma livrează direct din fabrică, în calitate de furnizor, către optici, cabinete medicale și magazine de optică din toată țara.
 Contact pentru fabrica de lentile, B2B și angro: telefon +40 771 048 936, e-mail ofalentile@gmail.com. Acest număr și acest e-mail se dau DOAR pentru cereri B2B, angro sau de fabrică, niciodată unui pacient care vrea o programare. Oferă și înregistrarea cererii.
 
 ## 21. Vechimea firmei

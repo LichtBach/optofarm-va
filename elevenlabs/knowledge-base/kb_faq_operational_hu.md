@@ -125,7 +125,7 @@ A cégnek saját lencsegyára van, és bármilyen speciális lencsét elő tud �
 
 ## 20. B2B, nagyker és partnerség
 
-A cég közvetlenül a gyárból szállít optikáknak és klinikáknak, és országszerte terjeszt.
+A cég beszállítóként, közvetlenül a gyárból szállít optikáknak, orvosi rendelőknek és optikai üzleteknek országszerte.
 A lencsegyár, a B2B és a nagykereskedelem elérhetősége: telefon +40 771 048 936, e-mail ofalentile@gmail.com. Ezt a számot és e-mail-címet CSAK B2B, nagykereskedelmi vagy gyári megkeresésre add meg, soha nem egy időpontot kérő páciensnek. Ajánld fel a kérés rögzítését is.
 
 ## 21. A cég alapítása
