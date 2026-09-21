@@ -132,6 +132,9 @@ Full detail, with what is verified and what is not:
   (`"Marosvasarhely, Rozsak tere"` matched nothing before).
 - **The two pronunciation dictionaries are built but attached to nothing** — that is the one open
   item, and it needs the ElevenLabs side. `elevenlabs/pronunciation/*.pls`.
+- The workflow export is **current again (126 nodes, was stuck at 115)**. The evolvo API key that had
+  been blocking every refresh is out of the workflow — moved into the existing credential, so
+  exports are clean by construction. Rotating that key, and the webhook secret, is still open.
 
 ### Done — the 2026-09-14 reschedule round is closed on both sides
 
