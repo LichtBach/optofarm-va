@@ -4,6 +4,31 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-21 (night) — pronunciation dictionaries uploaded and attached
+
+`ro-voice.pls` (20 rules) → `conversation_config.tts`, id `AaMtnNwhZIwuKDy7zI1m` version
+`sllOUy0OaQibE5jPf78c`. `hu-voice.pls` (36 rules) → `language_presets.hu.overrides.tts`, id
+`3uSfRsZV5XpeC3fdtKbV` version `jgpS5JvhL4HK73Dxvd4F`. Uploaded as
+`optofarm-{ro,hu}-voice-2026-09-21` and verified rule-for-rule by downloading them back. The `en`
+preset keeps an empty locator list deliberately — it overrides no voice, so it speaks with the
+Romanian voice and inherits the Romanian dictionary.
+
+- **Regression caused and fixed in the same session: `language_presets` REPLACES, it does not
+  merge.** Sending only the `hu` preset silently deleted the `en` preset and with it the English
+  first message. Caught by diffing the update response against the pre-update config, restored in
+  the next call, and confirmed byte-identical to its original value. Nothing warned about it.
+  Always send every preset you intend to keep, and diff afterwards.
+- **Correction: phonemes ARE reachable on this agent.** The public docs list phoneme support for
+  `eleven_flash_v2` and `eleven_v3` only, which would exclude `eleven_v3_conversational` — but the
+  agent carries `conversation_config.tts.enable_phoneme_tags` (currently `false`), described as
+  parsing phoneme tags "inline and from pronunciation dictionaries" into inline IPA. Alias stays the
+  default on merit rather than necessity; IPA is in the file comments for a mechanical switch.
+- **Editing a `.pls` requires a new upload and a new `version_id`** — a locator pins a version, so
+  an edited file changes nothing until the agent is re-pointed at it.
+- The MCP connector can attach a dictionary but cannot create one; upload is REST only.
+- Older `optofarm_ro`/`optofarm_hu`/`optofarm_en` dictionaries exist in the workspace, unattached and
+  partly keyed on pre-correction spellings (the newest HU one still maps `Anca`). Left alone.
+
 ## 2026-09-21 (evening) — Republicii transfer number; all surgery questions route to Bulevard
 
 Live version `agtvrsn_5901m320e9hdehya8bf5b3bknqvq`. Eleven transfer routes, up from nine.
