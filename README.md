@@ -117,6 +117,22 @@ survive the account move. Nothing currently mocks `book_appointment`. No tests a
 
 ## Handover between the two halves
 
+### 2026-09-21 — provider names and branch addresses now arrive corrected
+
+Full detail, with what is verified and what is not:
+**[`n8n/HANDOVER-2026-09-21.md`](n8n/HANDOVER-2026-09-21.md)**. In short:
+
+- Five provider names and all eight branch addresses are rewritten on the way out of n8n
+  (`Dr. Ilovan Anica`, `Dr. Prof. Székely Attila`, `Optometrist Bódi Ildikó`,
+  `Optometrist Ifj. Jeremiás László`, `Optometrist Jeremiás Zoltán`, `Tg. Mureș, …`). Evolvo is
+  never written to. No field was added, removed or renamed — the contract changed in content only.
+- **Nothing is required on the ElevenLabs side to keep working.** Corrected strings sent straight
+  back into a tool still match; verified live, Hungarian case endings included.
+- A Hungarian caller can now name a branch in Hungarian in one string
+  (`"Marosvasarhely, Rozsak tere"` matched nothing before).
+- **The two pronunciation dictionaries are built but attached to nothing** — that is the one open
+  item, and it needs the ElevenLabs side. `elevenlabs/pronunciation/*.pls`.
+
 ### Done — the 2026-09-14 reschedule round is closed on both sides
 
 The n8n side made `book_appointment` cancel a marked appointment once a replacement is booked, and
