@@ -1,88 +1,114 @@
 # Per-language pronunciation dictionaries
 
 The problem: text-to-speech applies **one** language's letter-to-sound rules to the whole
-utterance, so a Romanian name spoken by the Hungarian voice comes out with Hungarian
-phonetics, and vice versa. Some concrete failures:
+utterance, so a Romanian name spoken by the Hungarian voice comes out with Hungarian phonetics,
+and vice versa.
 
 | written | correct | Hungarian voice says | Romanian voice says |
 |---|---|---|---|
-| Anica | /aˈnika/ | "Anitsa" (`c` = /ts/ in HU) | correct |
-| Camelia | /kaˈmelia/ | "Tsamelia" | correct |
-| Istratuc | /istraˈtuk/ | "Ishtratuts" (`s` = /ʃ/) | correct |
-| Székely | /ˈseːkɛj/ | correct | "Sze-ke-li" (no `sz` digraph in RO) |
-| Baricz | /ˈbɒrits/ | correct | `cz` is not Romanian |
-| Jeremiás | /ˈjɛrɛmiaːʃ/ | correct | "Zheremias" (`j` = /ʒ/ in RO) |
-| Elekes | /ˈɛlɛkɛʃ/ | correct | "Elekes" with a final /s/ |
+| `Anica` | /aˈnika/ | "Anitsa" (`c` = /ts/) | correct |
+| `Camelia` | /kaˈmelia/ | "Tsamelia" | correct |
+| `Istratuc` | /istraˈtuk/ | "Ishtratuts" (`s` = /ʃ/) | correct |
+| `Optometrist` | /optomeˈtrist/ | "Optometrisht" | correct |
+| `Székely` | /ˈseːkɛj/ | correct | "Sze-ke-li" (no `sz` digraph in RO) |
+| `Baricz` | /ˈbɒrits/ | correct | `cz` is not Romanian |
+| `Jeremiás` | /ˈjɛrɛmiaːʃ/ | correct | "Zheremias" (`j` = /ʒ/) |
+| `Optometrist` | /optomeˈtrist/ | "Optometrisht" | correct |
 
-## The mechanism, verified 2026-09-21
+The one nobody expected was the **Romanian voice mispronouncing Romanian**: evolvo strips
+diacritics from its own language, and `Mures` appears in 6 of the 8 locations, so it fired on
+nearly every call. That is now fixed upstream in n8n rather than here — see below.
 
-`pronunciation_dictionary_locators` can be set **per language preset**, not only on the base
-agent. Probed live against `agent_3101kyq03vpxfpb9vsskgfh2f0bd`: the field is accepted and
-persisted inside `conversation_config.language_presets.hu.overrides.tts` and `.en.overrides.tts`,
-alongside the `voice_id` override the Hungarian preset already carried.
+## State, 2026-09-21
 
-That is what makes this approach work at all. One workspace-wide dictionary could not help,
-because a single fixed alias cannot be right in both languages — you would be choosing which
-language to mispronounce.
+| | |
+|---|---|
+| Model | `eleven_v3_conversational` (read live off the agent) |
+| Romanian (base) voice | `eXpIbVcVbLo8ZJQDlDnl` → `conversation_config.tts` |
+| Hungarian preset voice | `xjlfQQ3ynqiEyRpArrT8` → `language_presets.hu.overrides.tts` |
+| English preset | no voice override — inherits the Romanian voice, and with it `ro-voice.pls` |
+| Dictionaries attached | **none yet** — all three locator lists are empty |
 
-Romanian is the base agent language (`agent.language: "ro"`), so there is no `ro` preset: the
-Romanian dictionary attaches to `conversation_config.tts.pronunciation_dictionary_locators`.
+`pronunciation_dictionary_locators` works per language preset, not only on the base agent —
+probed live and persisted. That is what makes this approach possible at all: one workspace-wide
+dictionary could not help, because a single fixed alias cannot be right in both languages.
 
-| voice | attaches to | contains |
+## Alias, not phoneme — deliberately
+
+Phoneme tags are documented as working on `eleven_flash_v2` and `eleven_v3`. This agent runs
+**`eleven_v3_conversational`, which is on neither list**, and an unsupported phoneme tag is
+*skipped silently* — no error, just the default pronunciation. Alias works on every model.
+
+IPA is recorded in comments beside the entries that earn it, so this can be upgraded mechanically
+if a live test shows `eleven_v3_conversational` honours phonemes. Don't assume it does; v3's IPA
+support is the documented reason someone would switch models for this.
+
+## Keyed on what the TTS actually receives
+
+An alias fires on the grapheme reaching the engine — not on what evolvo stores, and not on the
+"correct" spelling. As of 2026-09-21 that is:
+
+- **Provider names in their corrected form.** The n8n `Display Names` nodes rewrite five of them
+  (`Anica`, `Székely`, `Bódi Ildikó`, `Ifj. Jeremiás László`, `Jeremiás Zoltán`) on the way out.
+- **Locations with their Romanian diacritics restored** — `Tg. Mureș, Str. Poștei Nr. 3` and so
+  on. The same `Display Names` map handles these as of 2026-09-21.
+
+If either changes, every affected entry silently stops firing and the phonetics quietly revert.
+Re-key in the same pass. This is why the dictionaries were built *after* the names were settled.
+
+**Diacritics are fixed in n8n; abbreviations are expanded here.** That split is not stylistic.
+Restoring a diacritic changes letters the matcher compares, and the matcher strips diacritics on
+both sides, so it is free. Expanding `Tg.` to `Târgu` is three edits against a Levenshtein budget
+of two — pushing it through n8n was measured to send all six Târgu branches to NO MATCH when the
+agent echoed a corrected address back into a tool. A dictionary alias never reaches the matcher, so
+abbreviation expansion is safe here and nowhere else.
+
+One thing was lost by fixing locations upstream: the Hungarian voice used to read the *stripped*
+`Postei` and `Scolii` correctly for free, since HU `s` = /ʃ/ is what the missing `ș` wanted. Now a
+real `ș` arrives — not a Hungarian letter — so `hu-voice.pls` maps those two back to plain `s`.
+A cheap price for both voices getting correct Romanian.
+
+## What is in each file
+
+| file | voice | contains |
 |---|---|---|
-| Romanian (base), `eXpIbVcVbLo8ZJQDlDnl` | `conversation_config.tts` | `ro-voice.pls` — Hungarian names respelled in Romanian orthography |
-| Hungarian, `xjlfQQ3ynqiEyRpArrT8` | `language_presets.hu.overrides.tts` | `hu-voice.pls` — Romanian names respelled in Hungarian orthography |
-| English (base voice) | `language_presets.en.overrides.tts` | undecided — see below |
+| `ro-voice.pls` | Romanian (and English) | Hungarian names respelled in Romanian orthography, plus the Romanian diacritics evolvo stripped |
+| `hu-voice.pls` | Hungarian | Romanian names and places respelled in Hungarian orthography |
 
-## What is NOT done
+Some things are deliberately **absent** from `hu-voice.pls`: `Ormenisan`, `Postei` and `Scolii`
+are read *correctly* by the Hungarian voice, because HU `s` = /ʃ/ is exactly what the stripped `ș`
+needs. The Romanian voice is the one that gets those wrong. Don't "fix" them on the Hungarian side.
 
-1. **The dictionaries do not exist yet.** The ElevenLabs MCP server exposes no
-   pronunciation-dictionary tools and this session has no REST API key, so the `.pls` files here
-   have to be uploaded through the dashboard. Once they exist, attaching them is a one-line
-   config change per preset.
-2. **The name lists are partial** — 14 of roughly 30 calendars, gathered from live tool results
-   and call transcripts rather than from a roster. Complete them from the evolvo calendar list.
-3. **Nothing here has been heard.** Every alias below is a prediction about how the engine will
-   read it. They need one pass with someone who speaks both languages, listening.
-4. **English.** An English caller hears the base Romanian voice, so `ro-voice.pls` applies to
-   them by default. Whether Hungarian names should also be respelled for English is an open
-   question — probably yes, and probably the same file.
+Word order is not something a lexicon can fix, so `Str.`/`Bld.` are not aliased in Hungarian
+(which puts `utca` after the street name), and `Gheorghe Doja` is one entry rather than two.
 
-## Two things to fix first
+## To deploy
 
-**The calendar names are missing their diacritics.** evolvo stores `Szekely`, not `Székely`;
-`Laszlo`, not `László`; `Ormenisan`, not `Ormenișan`. That degrades pronunciation even in the
-*matching* language, and it changes what the alias has to be keyed on — an entry for `Székely`
-will not fire on a calendar that says `Szekely`. The graphemes below are therefore keyed on the
-stripped spellings evolvo actually returns.
+The ElevenLabs MCP connector exposes **no** pronunciation-dictionary tools — checked again
+2026-09-21. Upload is dashboard or REST.
 
-`Ormenisan` is the interesting case: the Hungarian voice reads the stripped spelling correctly
-(HU `s` = /ʃ/, which is what `ș` needs), and the Romanian voice reads it wrongly. The
-cross-language problem and the diacritic problem cancel out in one direction and compound in the
-other.
+1. Upload both `.pls` files (ElevenLabs → Pronunciation Dictionaries). Note the returned
+   `pronunciation_dictionary_id` and `version_id` for each.
+2. Attach `ro-voice.pls` to `conversation_config.tts.pronunciation_dictionary_locators`.
+3. Attach `hu-voice.pls` to
+   `conversation_config.language_presets.hu.overrides.tts.pronunciation_dictionary_locators`.
+4. Leave the `en` preset alone — it inherits the base voice and the Romanian dictionary with it.
 
-**`Dr. Ilovan Anca` is still misspelt in evolvo** — the client says `Anica`. Fix the calendar
-before keying a dictionary entry to either spelling.
+## Smoke test — every entry here is a prediction
 
-## Getting the name list
+Nothing in either file has been heard. They are informed guesses about how the engine reads a
+respelling. Do one pass per direction with someone who speaks both languages listening:
 
-A read-only n8n workflow spec and a ready-to-paste prompt for the n8n agent are in
-[`../../n8n/provider-roster-workflow-prompt.md`](../../n8n/provider-roster-workflow-prompt.md). It dumps every
-calendar keyed on `calendarid` (not the name, which is about to change) with four empty columns for a human to
-fill in: `name_display`, `spoken_ro`, `spoken_hu`, `notes`. That one table feeds both this dictionary and the
-option C fallback below.
+- **Romanian voice, Hungarian names** — ask for `Székely`, `Baricz`, `Jeremiás László`, `Elekes`.
+  Listen for `sz` read as two letters, `cz` mangled, `j` as /ʒ/, final `s` as /s/ not /ʃ/.
+- **Hungarian voice, Romanian names** — ask for `Ilovan Anica`, `Popa Camelia`, `Istratuc Dorina`,
+  and any optometrist. Listen for `c` as /ts/ ("Anitsa", "Tsamelia") and `s` as /ʃ/.
+- **Both voices, any branch** — the location is read on every single call. `Mureș` and `Piața` in
+  Romanian; `Marosvásárhely` and `Dózsa György` in Hungarian.
+- **Switch mid-call** and ask for the same doctor in both languages. It should sound right in each,
+  and the switch must not trip `language_detection` on the name alone.
 
-## Interaction with the language gate
-
-Saying a Hungarian name inside a Romanian sentence is **not** a language switch and must not
-call `language_detection`. If anyone ever tries to solve pronunciation by switching language per
-name, calls will thrash between voices. The gate in the system prompt keys on the language the
-agent is about to speak, and one foreign proper noun does not change that — but the wording has
-never been tested against this case.
-
-## If this route fails
-
-Option C, kept in reserve: n8n returns `doctor_spoken_ro` and `doctor_spoken_hu` next to
-`doctor`, exactly as it already returns `date_spoken` next to `date`, and the agent speaks
-whichever matches the language it is in while still sending the canonical `doctor` back to the
-tools. No platform feature needed, works on any model or voice.
+Then the same three with the dictionaries detached, and compare. The two entries most likely to be
+wrong: `Ifj` → `Ifiabb` in Romanian (`Junior` is the other defensible reading — this one is a
+judgement call about what a Romanian caller expects), and the multi-word graphemes
+`Tg. Mures` / `Gheorghe Doja`, which simply will not fire if multi-word matching does not work.

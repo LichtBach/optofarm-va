@@ -104,3 +104,49 @@ Per direction, one short call each, with someone who speaks both languages liste
   each, and the switch must not trip `language_detection` on the name alone.
 
 Then the same three with the dictionaries attached, and compare.
+
+---
+
+## Outcome, 2026-09-21 — the dump was taken WITHOUT building the branch
+
+The roster is in [`provider-roster-2026-09-21.json`](provider-roster-2026-09-21.json) and
+[`.csv`](provider-roster-2026-09-21.csv): 30 calendars, 16 unique providers, 8 locations.
+
+It did not need a new workflow branch. The live `CA` branch calls `get_info.php` on every
+availability check, and the n8n REST API returns each node's real input/output from past runs, so the
+full `Calendars[]` payload was read straight out of execution `1464` (2026-09-21 12:25, a genuine
+caller-driven run):
+
+```
+GET /api/v1/executions?workflowId=jLUnlrt9zM8VWZvp&limit=15&status=success
+GET /api/v1/executions/1464?includeData=true   ->  runData['CA get_info.php']
+```
+
+`splitName` / `providerKind` were then applied off the **live** node source, not the export in this
+repo — the committed `Optofarm-WIP.workflow.json` is stale and still has the pre-specialty version of
+`CA Match Calendars` (no `splitName`, no `vision_therapy`). Refresh it before trusting it again.
+
+Zero nodes added, zero writes, nothing deactivated. The ROSTER branch above is still worth building
+if this needs to be repeatable on demand — but it was not worth the risk on a live 122-node workflow
+for a one-off audit.
+
+### Correction: `calendarid` CANNOT be the key
+
+The prompt above says to key the table on `calendarid` because names are about to change. That is
+wrong, and the roster is keyed on `location` + `name_raw` instead.
+
+`calendarid` is not an id. It is an ~800-character encrypted envelope (observed lengths 792–920) that
+is **regenerated on every call**. Two `get_info.php` responses 35 seconds apart, execution `1463` vs
+`1464`, returned the same 30 calendars — identical name and workstation on all 30 — and **0 of 30
+matching `calendarid` values**. It is bound to the session token, not to the calendar.
+
+So there is no stable key anywhere in the thirdpartyai API. Consequences:
+
+- The roster is a **point-in-time artifact**, valid for the spellings as of `fetched_at`. After the
+  names are corrected in evolvo, re-dump and re-match on `location` + fuzzy name. With 16 providers
+  across 8 named branches that is a five-minute job, not a reason to build key infrastructure.
+- Never persist a `calendarid` anywhere. Anything holding one for more than the length of a single
+  request is already broken. (The `CA` branch is fine — it passes the value straight from
+  `get_info.php` into `get_work_days.php` inside one execution.)
+- The real fix for a stable, clinic-maintained identity is `ai_public_names_hu/ro/en`, still empty on
+  all 30 calendars — open question 11 with Imreh.

@@ -3,6 +3,80 @@
 Newest first. Every entry is a change to the live workflow **Optofarm - WIP**
 (`jLUnlrt9zM8VWZvp`) on `https://n8n.splitagency.biz.id`.
 
+## 2026-09-21 (later still) — a Hungarian caller can name a branch in Hungarian
+
+`CA Match Calendars` and `BOOK Match Calendars` only rewrote a branch alias when it was the
+**entire** query. So `Marosvasarhely` alone matched, and `Rozsak tere` alone matched, but
+`"Marosvasarhely, Rozsak tere"` — city and square together, the natural way to say it — matched
+nothing at all. The same gap hit Romanian: `"Targu Mures, Piata Trandafirilor"` also failed.
+
+- **Phrase rewriting inside a longer string**, applied only after the existing whole-string ALIAS
+  table declines, so every path that worked before is untouched by construction. Longest phrase
+  first, so `dozsa gyorgy` wins over `dozsa`. Targets are spelled as the tokens evolvo actually
+  holds in `workstation`.
+- **Generic street nouns dropped from the query** — `utca`, `ut`, `tere`, `ter`, `str`, `piata`,
+  `nr` and friends carry no branch information, so `"Dozsa Gyorgy utca"` has to reach the same
+  place as `"Dozsa"`. Query side only, never the workstation, and only when a real token survives:
+  a bare `"utca"` still matches nothing rather than everything.
+- New Hungarian branch names now reaching the right place: `Rózsák tere`, `Szentgyörgy tér`,
+  `Köztársaság tere`, `Posta utca`, `Dózsa György utca`, `Iskola utca`, `Fő út` (→ Str. Principală).
+- **Verified differentially, not by spot check.** A 67-query corpus — every literal workstation,
+  every existing alias, Hungarian and Romanian full addresses, the corrected diacritic forms, and
+  junk like `"utca"`, `"Cluj"`, `""` — run through the old and new matcher side by side:
+  **15 fixed, 0 broken, nothing else changed.** Re-run against the code extracted back out of the
+  deployed payload, not just the draft.
+
+## 2026-09-21 (later) — branch addresses corrected too
+
+Extends the `Display Names` map with a `LOCATIONS` table: all 8 branch addresses get their Romanian
+diacritics back (`Tg. Mureș, Str. Poștei Nr. 3`). This is the Romanian voice mispronouncing its own
+language — `Mures` is in 6 of the 8 addresses, so it was wrong on nearly every call.
+
+- **Diacritics only. Abbreviations are deliberately NOT expanded.** `Tg.` → `Târgu` is three edits
+  against the matcher's Levenshtein budget of two, and `placeMatch` has no alias for it in that
+  position: measured against the live matcher, expanding it sent **all six Târgu branches to
+  NO MATCH** when a corrected address was echoed back into a tool. Diacritics-only round-trips
+  cleanly — 12/12 against the live `placeMatch`, including partial queries like `Poștei` alone.
+  Abbreviation expansion moved to `ro-voice.pls`, where it is output-only and cannot reach a matcher.
+- Six new `LOC_KEYS` (`location`, `available_locations`, `doctor_locations`, `matching_locations`,
+  `other_locations`, `requested_location`), kept separate from `NAME_KEYS` so the two maps cannot
+  cross-fire. Free text is still untouched — verified an `observations` field mentioning a branch.
+- `elevenlabs/pronunciation/*.pls` re-keyed in the same pass: five now-dead entries dropped from
+  `ro-voice.pls`, three location graphemes re-keyed in `hu-voice.pls`, and two new Hungarian entries
+  added — `Poștei`/`Școlii` map back to plain `s`, because the Hungarian voice had been reading the
+  *stripped* spellings correctly by accident and now receives a `ș` it has no letter for.
+
+## 2026-09-21 — corrected provider names returned to ElevenLabs, 122 → **126 nodes**
+
+Evolvo stores all 16 provider names with diacritics stripped. Rather than have the clinic retype
+them (and risk evolvo normalising them straight back on save), the correction is applied on the way
+out, in n8n. Evolvo is never written to.
+
+- **Four new Code nodes** — `CA / BOOK / FIND / MAN Display Names` — each wired downstream of both
+  that branch's happy path and its `Error Out`, so all four are now the webhook responders. Source
+  in [`display-names.node.js`](display-names.node.js); the four copies are identical.
+- **Five names change**, per the clinic's decision: `Dr. Ilovan Anca` → `Anica` (a wrong given name,
+  not a diacritic), and Hungarian diacritics restored on `Székely Attila`, `Ildikó`,
+  `Ifj. Jeremiás László` (also the missing period) and `Jeremiás Zoltán`. The other eleven are
+  returned untouched — Romanian names keep their stripped spellings, deliberately.
+- **Applied at the last node and nowhere else.** The obvious place is `splitName`, and it would have
+  been a silent bug: `MAN rel Find Calendar` matches a cancelled appointment back to its calendar
+  with `norm(c.name) === norm(a.doctor)`, an *exact* equality after diacritic stripping. Diacritics
+  survive it; `Anica` vs `Anca` does not. Rewriting upstream would have turned every
+  `slot_release_status` into `unknown` with nothing visibly breaking.
+- **Scoped to name-bearing keys** (`doctor`, `available_doctors`, `doctors_at_requested_location`,
+  `matching_doctors`, `specialty_providers`, `calendar_name`), not a blind walk over every string —
+  a patient legitimately called `Jeremias Zoltan` must not be rewritten. Verified.
+- **Round-trip is safe.** The agent may echo a corrected name straight back into a tool:
+  `CA/BOOK Match Calendars` NFD-normalise and strip combining marks on both sides, and `Anca`→`Anica`
+  is one edit against a Levenshtein budget of 2. All 16 names plus `Kilován` and
+  `Ilovan Anica doktornőhöz` tested against the live matcher — 14/14 pass.
+- **Fails open.** Any exception passes the item through untouched; an unrecognised provider name is
+  logged, never raised. A cosmetic rewrite must never drop a call.
+
+Confirmed by the clinic the same day: it is **`Bódi`**. `Optometrist Bodi Ildiko` returns as
+`Optometrist Bódi Ildikó`. No open questions remain on the name list.
+
 ## 2026-09-14 (evening) — `slot_released`, and the cancel path from 7 evolvo calls to 3
 
 Answers the round in [`REQUESTS_FROM_ELEVENLABS.md`](REQUESTS_FROM_ELEVENLABS.md). 115 → **122 nodes**.
