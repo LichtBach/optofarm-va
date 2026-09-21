@@ -13,11 +13,11 @@ and vice versa.
 | `Székely` | /ˈseːkɛj/ | correct | "Sze-ke-li" (no `sz` digraph in RO) |
 | `Baricz` | /ˈbɒrits/ | correct | `cz` is not Romanian |
 | `Jeremiás` | /ˈjɛrɛmiaːʃ/ | correct | "Zheremias" (`j` = /ʒ/) |
-| `Mureș` | /ˈmureʃ/ | correct (`s` = /ʃ/) | **"Mures" — evolvo stripped the `ș`** |
+| `Optometrist` | /optomeˈtrist/ | "Optometrisht" | correct |
 
-That last row is the one nobody expected: the **Romanian voice mispronounces Romanian**, because
-evolvo strips diacritics from its own language. `Mures` appears in 6 of the 8 locations, so it
-fires on nearly every call — a bigger everyday problem than any single doctor's name.
+The one nobody expected was the **Romanian voice mispronouncing Romanian**: evolvo strips
+diacritics from its own language, and `Mures` appears in 6 of the 8 locations, so it fired on
+nearly every call. That is now fixed upstream in n8n rather than here — see below.
 
 ## State, 2026-09-21
 
@@ -50,16 +50,23 @@ An alias fires on the grapheme reaching the engine — not on what evolvo stores
 
 - **Provider names in their corrected form.** The n8n `Display Names` nodes rewrite five of them
   (`Anica`, `Székely`, `Bódi Ildikó`, `Ifj. Jeremiás László`, `Jeremiás Zoltán`) on the way out.
-- **Locations in the raw stripped form.** n8n does **not** touch locations, so `Tg. Mures`,
-  `Piata`, `Postei`, `Scolii`, `Principala` arrive exactly as evolvo has them.
+- **Locations with their Romanian diacritics restored** — `Tg. Mureș, Str. Poștei Nr. 3` and so
+  on. The same `Display Names` map handles these as of 2026-09-21.
 
 If either changes, every affected entry silently stops firing and the phonetics quietly revert.
 Re-key in the same pass. This is why the dictionaries were built *after* the names were settled.
 
-Worth knowing: **fixing the locations in n8n instead** — the same five-line map that already
-corrects the names — would be cleaner than aliasing them here, because both voices would then
-receive correct Romanian and only the genuine cross-language respelling would live in these files.
-It was not done because it would mean re-keying this file again. Decide it once, deliberately.
+**Diacritics are fixed in n8n; abbreviations are expanded here.** That split is not stylistic.
+Restoring a diacritic changes letters the matcher compares, and the matcher strips diacritics on
+both sides, so it is free. Expanding `Tg.` to `Târgu` is three edits against a Levenshtein budget
+of two — pushing it through n8n was measured to send all six Târgu branches to NO MATCH when the
+agent echoed a corrected address back into a tool. A dictionary alias never reaches the matcher, so
+abbreviation expansion is safe here and nowhere else.
+
+One thing was lost by fixing locations upstream: the Hungarian voice used to read the *stripped*
+`Postei` and `Scolii` correctly for free, since HU `s` = /ʃ/ is what the missing `ș` wanted. Now a
+real `ș` arrives — not a Hungarian letter — so `hu-voice.pls` maps those two back to plain `s`.
+A cheap price for both voices getting correct Romanian.
 
 ## What is in each file
 

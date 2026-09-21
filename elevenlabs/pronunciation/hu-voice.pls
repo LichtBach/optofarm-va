@@ -76,16 +76,25 @@
   <!-- ONE entry, not `Tg` + `Mures` separately: two entries would collide and produce
        "Marosvásárhely Maros". If multi-word graphemes turn out not to match, this simply
        does not fire and the caller hears the Romanian name — degradation, not corruption. -->
-  <lexeme><grapheme>Tg. Mures</grapheme><alias>Marosvásárhely</alias></lexeme>
+  <lexeme><grapheme>Tg. Mureș</grapheme><alias>Marosvásárhely</alias></lexeme>
   <lexeme><grapheme>Sovata</grapheme><alias>Szováta</alias></lexeme>
   <lexeme><grapheme>Reghin</grapheme><alias>Szászrégen</alias></lexeme>
   <!-- /ˈpjatsa/ is actually right in Hungarian by accident (`c` = /ts/), but the vowel is not -->
-  <lexeme><grapheme>Piata</grapheme><alias>Pjáca</alias></lexeme>
+  <lexeme><grapheme>Piața</grapheme><alias>Pjáca</alias></lexeme>
   <lexeme><grapheme>Trandafirilor</grapheme><alias>Trándáfirilor</alias></lexeme>
   <!-- /repuˈblikii/ — `c` = /ts/ gives "Republitsii" -->
   <lexeme><grapheme>Republicii</grapheme><alias>Republikii</alias></lexeme>
-  <lexeme><grapheme>Principala</grapheme><alias>Principálá</alias></lexeme>
+  <lexeme><grapheme>Principală</grapheme><alias>Principálá</alias></lexeme>
   <lexeme><grapheme>Fortuna</grapheme><alias>Fortuná</alias></lexeme>
+
+  <!-- NEW since n8n started restoring Romanian diacritics in locations. These two used to
+       need no entry at all: the Hungarian voice read the STRIPPED `Postei` and `Scolii`
+       correctly, because HU `s` = /ʃ/ is exactly what the missing `ș` wanted. Now that the
+       real `ș` arrives — a letter Hungarian does not have — map it back to the plain `s`
+       that already produced the right sound. Losing these is the one cost of fixing the
+       locations upstream, and it is a cheap one. -->
+  <lexeme><grapheme>Poștei</grapheme><alias>Postei</alias></lexeme>
+  <lexeme><grapheme>Școlii</grapheme><alias>Scolii</alias></lexeme>
   <lexeme><grapheme>Dec</grapheme><alias>december</alias></lexeme>
   <!-- Hungarian puts the surname first, so aliasing the two words separately would give
        "Georgye Dózsa" — backwards. One entry, in Hungarian order. -->

@@ -61,15 +61,13 @@
        Keyed without the period so it cannot interact with sentence splitting. -->
   <lexeme><grapheme>Ifj</grapheme><alias>Ifiabb</alias></lexeme>
 
-  <!-- ===== Romanian words evolvo has stripped =========================================
-       Not a cross-language problem — the Romanian voice reading Romanian wrongly. -->
+  <!-- ===== Romanian words still arriving stripped =====================================
+       The branch addresses USED to be here — `Mures`, `Piata`, `Postei`, `Scolii`,
+       `Principala`. They are gone because n8n now restores those diacritics before the
+       text ever reaches the engine (the `LOCATIONS` map in `Display Names`), which is the
+       better place for it: both voices get correct Romanian, not just this one.
+       What remains is what n8n still does NOT touch. -->
 
-  <!-- /ˈmureʃ/ — in 6 of the 8 locations, so this fires on nearly every call -->
-  <lexeme><grapheme>Mures</grapheme><alias>Mureș</alias></lexeme>
-  <lexeme><grapheme>Piata</grapheme><alias>Piața</alias></lexeme>
-  <lexeme><grapheme>Postei</grapheme><alias>Poștei</alias></lexeme>
-  <lexeme><grapheme>Scolii</grapheme><alias>Școlii</alias></lexeme>
-  <lexeme><grapheme>Principala</grapheme><alias>Principală</alias></lexeme>
   <!-- Provider surname, left stripped in evolvo by the clinic's choice -->
   <lexeme><grapheme>Ormenisan</grapheme><alias>Ormenișan</alias></lexeme>
   <!-- Service suffix on the psycho-orthoptics calendar -->

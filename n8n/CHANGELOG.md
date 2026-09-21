@@ -3,6 +3,26 @@
 Newest first. Every entry is a change to the live workflow **Optofarm - WIP**
 (`jLUnlrt9zM8VWZvp`) on `https://n8n.splitagency.biz.id`.
 
+## 2026-09-21 (later) — branch addresses corrected too
+
+Extends the `Display Names` map with a `LOCATIONS` table: all 8 branch addresses get their Romanian
+diacritics back (`Tg. Mureș, Str. Poștei Nr. 3`). This is the Romanian voice mispronouncing its own
+language — `Mures` is in 6 of the 8 addresses, so it was wrong on nearly every call.
+
+- **Diacritics only. Abbreviations are deliberately NOT expanded.** `Tg.` → `Târgu` is three edits
+  against the matcher's Levenshtein budget of two, and `placeMatch` has no alias for it in that
+  position: measured against the live matcher, expanding it sent **all six Târgu branches to
+  NO MATCH** when a corrected address was echoed back into a tool. Diacritics-only round-trips
+  cleanly — 12/12 against the live `placeMatch`, including partial queries like `Poștei` alone.
+  Abbreviation expansion moved to `ro-voice.pls`, where it is output-only and cannot reach a matcher.
+- Six new `LOC_KEYS` (`location`, `available_locations`, `doctor_locations`, `matching_locations`,
+  `other_locations`, `requested_location`), kept separate from `NAME_KEYS` so the two maps cannot
+  cross-fire. Free text is still untouched — verified an `observations` field mentioning a branch.
+- `elevenlabs/pronunciation/*.pls` re-keyed in the same pass: five now-dead entries dropped from
+  `ro-voice.pls`, three location graphemes re-keyed in `hu-voice.pls`, and two new Hungarian entries
+  added — `Poștei`/`Școlii` map back to plain `s`, because the Hungarian voice had been reading the
+  *stripped* spellings correctly by accident and now receives a `ș` it has no letter for.
+
 ## 2026-09-21 — corrected provider names returned to ElevenLabs, 122 → **126 nodes**
 
 Evolvo stores all 16 provider names with diacritics stripped. Rather than have the clinic retype
