@@ -92,7 +92,7 @@ Firma are opt puncte de lucru: șase în Târgu Mureș, unul în Reghin și unul
 - Fortuna — Târgu Mureș, Bulevardul 1 Decembrie 1918 nr. 182-184: luni–vineri 08:00–20:00, sâmbătă și duminica închis. Telefon: +40 265 265 205.
 - Doja / Dózsa György utca — Târgu Mureș, Strada Gheorghe Doja nr. 64-68: luni–vineri 08:00–20:00, sâmbătă și duminica închis. Telefon: +40 265 212 212.
 - Reghin / Szászrégen — Reghin, Strada Școlii nr. 11: luni–vineri 08:00–18:00, sâmbătă și duminica închis. Telefon: +40 265 512 042.
-- Sovata / Szováta — Sovata, Strada Principală nr. 196: luni–vineri 08:00–20:00, sâmbătă și duminica închis. Telefon: +40 265 577 282.
+- Sovata / Szováta — Sovata, Strada Principală nr. 196: luni–vineri 09:00–16:00, sâmbătă și duminica închis. Telefon: +40 265 577 282. Acest punct de lucru are program mai scurt decât celelalte: se închide la ora patru după-amiaza.
 
 ## 16. Indicații de orientare — repere confirmate pentru toate cele opt puncte de lucru
 

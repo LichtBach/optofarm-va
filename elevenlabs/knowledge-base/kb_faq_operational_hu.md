@@ -92,7 +92,7 @@ A cégnek nyolc egysége van: hat Marosvásárhelyen, egy Szászrégenben és eg
 - Fortuna — Marosvásárhely, Bulevardul 1 Decembrie 1918 nr. 182-184: hétfő–péntek 08:00–20:00, szombaton és vasárnap zárva. Telefon: +40 265 265 205.
 - Dózsa György utca / Doja — Marosvásárhely, Dózsa György utca 64-68 (Strada Gheorghe Doja nr. 64-68): hétfő–péntek 08:00–20:00, szombaton és vasárnap zárva. Telefon: +40 265 212 212.
 - Szászrégen / Reghin — Szászrégen, Iskola utca 11 (Strada Școlii nr. 11): hétfő–péntek 08:00–18:00, szombaton és vasárnap zárva. Telefon: +40 265 512 042.
-- Szováta / Sovata — Szováta, Fő utca 196 (Strada Principală nr. 196): hétfő–péntek 08:00–20:00, szombaton és vasárnap zárva. Telefon: +40 265 577 282.
+- Szováta / Sovata — Szováta, Fő utca 196 (Strada Principală nr. 196): hétfő–péntek 09:00–16:00, szombaton és vasárnap zárva. Telefon: +40 265 577 282. Ez az egység rövidebb ideig tart nyitva, mint a többi: délután négykor zár.
 
 ## 16. Útbaigazítás — megerősített tereptárgyak mind a nyolc egységhez
 

@@ -4,6 +4,78 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-21 — Sovata hours corrected; promotions split into their own documents
+
+Live agent version `agtvrsn_2301m31p2hvzfk9vsy74xvrc34gw`. Knowledge base goes from 5 documents to 7.
+
+### 1. Sovata was wrong in the knowledge base, not in the agent
+
+Client reported the agent saying the Sovata branch is open until 20:00. It was reading the knowledge
+base correctly — **the knowledge base said `luni–vineri 08:00–20:00`**, copied into both language
+documents. Real hours are Monday–Friday **09:00–16:00**, closed at weekends.
+
+Corrected in both, with one extra clause so the difference is stated rather than left to be inferred
+from a table of otherwise-identical rows: *"Acest punct de lucru are program mai scurt decât
+celelalte: se închide la ora patru după-amiaza."* / *"Ez az egység rövidebb ideig tart nyitva, mint a
+többi: délután négykor zár."* Sovata is now the only branch closing before 18:00, so a caller who
+assumes the usual evening hours gets told otherwise explicitly.
+
+Nothing in the system prompt needed changing: it states no hours at all, only "read them from the
+knowledge base" and the Saturday rule, which still holds.
+
+| document | before | after |
+|---|---|---|
+| HU FAQ `l7TG9P3XnTjgRThXelU5` | 13,243 B | 13,326 B |
+| RO FAQ `zynIEChUpgg4AaEbZInG` | 13,290 B | 13,390 B |
+
+**Worth a wider look.** These hours came from the original handover and nobody has re-verified the
+other seven branches against what the shops actually do. One row was wrong by four hours; the same
+could be true elsewhere. A single pass by someone at Optofarm over all eight rows would be cheap
+insurance.
+
+### 2. Promotions: two new documents, not FAQ sections
+
+Promotions change on their own schedule and are the one kind of fact with an expiry date, so they get
+their own documents rather than a section inside a 13 KB file that must be re-sent whole each time:
+
+| document | id | size |
+|---|---|---|
+| Optica Optofarm — promoții curente | `cvLNZxkdCO126cyQtWPf` | 3,221 B |
+| Optica Optofarm — aktuális akciók | `WdO5PUPyS2aEAFdoyNQW` | 3,206 B |
+
+Both `usage_mode: auto`, so they are retrieved on demand and cost nothing per turn. Updating a
+promotion is now: replace one section in one small document. Nothing else moves.
+
+Each document opens with rules that outlive any individual campaign, so the next promotion inherits
+them:
+
+- say only what is written, one or two sentences;
+- **never compute the discounted price** — the agent has no price list beyond a handful of figures,
+  and "30% off a lens" invites arithmetic it cannot do;
+- **check the validity window against today's date**; past the end date the campaign does not exist
+  and must not be mentioned;
+- if no campaign section is present, say there is no current promotion;
+- anything not written down — the exact dioptre range, which lenses, whether offers combine, whether
+  stock remains — is settled in the shop, not on the phone;
+- the discount does not apply to the consultation.
+
+First campaign loaded: **school-start, 30% off lenses, 15 August – 30 September 2026**. Preschool
+through upper secondary, enrolled in a Romanian public or private school; anti-reflective ophthalmic
+lenses within the campaign's dioptre range; at most two lenses; ID, birth certificate or student card
+shown in the shop; while stocks last.
+
+The client's copy says "în intervalul dioptric stabilit pentru această campanie" without stating the
+range. That gap is recorded explicitly — *"Intervalul dioptric exact NU este scris aici și nu îl
+cunoști"* — because an unstated numeric range next to a concrete percentage is exactly the shape of
+fact this agent invents.
+
+**It expires in nine days.** After 30 September the section should be deleted, not left to the
+agent's date check alone. If a promotion is running but the client has not sent new copy, an empty
+document is the correct state: the rules at the top then make the agent say there is nothing on.
+
+No English version. The FAQ documents are RO and HU only and an English caller is already served by
+cross-language retrieval; adding a third language here would be a new pattern for no new coverage.
+
 ## 2026-09-17 — knowledge base: Dr. Tripon Robert consults in English
 
 One line added to section 23 of both FAQ documents (HU 12,983 → 13,243 B; RO 12,985 → 13,290 B):
