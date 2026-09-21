@@ -64,6 +64,14 @@ other.
 **`Dr. Ilovan Anca` is still misspelt in evolvo** — the client says `Anica`. Fix the calendar
 before keying a dictionary entry to either spelling.
 
+## Getting the name list
+
+A read-only n8n workflow spec and a ready-to-paste prompt for the n8n agent are in
+[`../../n8n/provider-roster-workflow-prompt.md`](../../n8n/provider-roster-workflow-prompt.md). It dumps every
+calendar keyed on `calendarid` (not the name, which is about to change) with four empty columns for a human to
+fill in: `name_display`, `spoken_ro`, `spoken_hu`, `notes`. That one table feeds both this dictionary and the
+option C fallback below.
+
 ## Interaction with the language gate
 
 Saying a Hungarian name inside a Romanian sentence is **not** a language switch and must not
