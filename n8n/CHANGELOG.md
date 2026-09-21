@@ -3,6 +3,29 @@
 Newest first. Every entry is a change to the live workflow **Optofarm - WIP**
 (`jLUnlrt9zM8VWZvp`) on `https://n8n.splitagency.biz.id`.
 
+## 2026-09-21 (later still) — a Hungarian caller can name a branch in Hungarian
+
+`CA Match Calendars` and `BOOK Match Calendars` only rewrote a branch alias when it was the
+**entire** query. So `Marosvasarhely` alone matched, and `Rozsak tere` alone matched, but
+`"Marosvasarhely, Rozsak tere"` — city and square together, the natural way to say it — matched
+nothing at all. The same gap hit Romanian: `"Targu Mures, Piata Trandafirilor"` also failed.
+
+- **Phrase rewriting inside a longer string**, applied only after the existing whole-string ALIAS
+  table declines, so every path that worked before is untouched by construction. Longest phrase
+  first, so `dozsa gyorgy` wins over `dozsa`. Targets are spelled as the tokens evolvo actually
+  holds in `workstation`.
+- **Generic street nouns dropped from the query** — `utca`, `ut`, `tere`, `ter`, `str`, `piata`,
+  `nr` and friends carry no branch information, so `"Dozsa Gyorgy utca"` has to reach the same
+  place as `"Dozsa"`. Query side only, never the workstation, and only when a real token survives:
+  a bare `"utca"` still matches nothing rather than everything.
+- New Hungarian branch names now reaching the right place: `Rózsák tere`, `Szentgyörgy tér`,
+  `Köztársaság tere`, `Posta utca`, `Dózsa György utca`, `Iskola utca`, `Fő út` (→ Str. Principală).
+- **Verified differentially, not by spot check.** A 67-query corpus — every literal workstation,
+  every existing alias, Hungarian and Romanian full addresses, the corrected diacritic forms, and
+  junk like `"utca"`, `"Cluj"`, `""` — run through the old and new matcher side by side:
+  **15 fixed, 0 broken, nothing else changed.** Re-run against the code extracted back out of the
+  deployed payload, not just the draft.
+
 ## 2026-09-21 (later) — branch addresses corrected too
 
 Extends the `Display Names` map with a `LOCATIONS` table: all 8 branch addresses get their Romanian
