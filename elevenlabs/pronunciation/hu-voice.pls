@@ -15,7 +15,8 @@
   GRAPHEMES ARE KEYED ON WHAT THE TTS ACTUALLY RECEIVES as of 2026-09-21. See the header
   of ro-voice.pls — the same re-keying warning applies here.
 
-  ALIAS, NOT PHONEME, DELIBERATELY — see ro-voice.pls for why. PLS matching is CASE
+  ALIAS, NOT PHONEME — see ro-voice.pls for the full reasoning, including the
+  `enable_phoneme_tags` flag that makes phonemes reachable on this agent. PLS matching is CASE
   SENSITIVE; graphemes are capitalised as evolvo returns them.
 
   UNVERIFIED — every alias is a prediction. Listen first.

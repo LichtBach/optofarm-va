@@ -15,11 +15,15 @@
   changes, every entry below silently stops firing. Nothing breaks visibly — the phonetics
   just quietly revert. Re-key this file in the same pass.
 
-  ALIAS, NOT PHONEME, DELIBERATELY. Phoneme tags are documented as working on
-  `eleven_flash_v2` and `eleven_v3`; this agent runs `eleven_v3_conversational`, which is
-  on neither list. An unsupported phoneme tag is *skipped silently* — the same invisible
-  failure. Alias works on every model. IPA is recorded in the comments so this can be
-  upgraded mechanically if a live test shows v3_conversational honours phonemes.
+  ALIAS, NOT PHONEME — but the reason is narrower than the public docs suggest. The docs list
+  phoneme support for `eleven_flash_v2` and `eleven_v3` only, which would exclude this agent's
+  `eleven_v3_conversational`. That is not the whole story: the agent carries a
+  **`conversation_config.tts.enable_phoneme_tags`** flag ("Opt-in to SSML phoneme tag handling for
+  V3 models... phoneme tags, inline and from pronunciation dictionaries, are parsed into inline IPA")
+  and it is currently **false**. So phonemes ARE reachable here — one boolean away — and alias is a
+  deliberate default rather than the only option: it works whatever that flag says, and respelling
+  is a smaller judgement call than committing to an IPA transcription nobody has heard yet. IPA is
+  recorded in the comments below so the switch is mechanical if the listening test wants it.
 
   PLS matching is CASE SENSITIVE. Every grapheme here is capitalised because that is how
   evolvo returns it and how the agent writes it mid-sentence.

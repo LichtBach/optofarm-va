@@ -27,21 +27,46 @@ nearly every call. That is now fixed upstream in n8n rather than here — see be
 | Romanian (base) voice | `eXpIbVcVbLo8ZJQDlDnl` → `conversation_config.tts` |
 | Hungarian preset voice | `xjlfQQ3ynqiEyRpArrT8` → `language_presets.hu.overrides.tts` |
 | English preset | no voice override — inherits the Romanian voice, and with it `ro-voice.pls` |
-| Dictionaries attached | **none yet** — all three locator lists are empty |
+| Dictionaries attached | **yes, 2026-09-21** — see below |
 
 `pronunciation_dictionary_locators` works per language preset, not only on the base agent —
 probed live and persisted. That is what makes this approach possible at all: one workspace-wide
 dictionary could not help, because a single fixed alias cannot be right in both languages.
 
-## Alias, not phoneme — deliberately
+## Deployed
 
-Phoneme tags are documented as working on `eleven_flash_v2` and `eleven_v3`. This agent runs
-**`eleven_v3_conversational`, which is on neither list**, and an unsupported phoneme tag is
-*skipped silently* — no error, just the default pronunciation. Alias works on every model.
+| file | dictionary id | version id | attached to |
+|---|---|---|---|
+| `ro-voice.pls` (20 rules) | `AaMtnNwhZIwuKDy7zI1m` | `sllOUy0OaQibE5jPf78c` | `conversation_config.tts` |
+| `hu-voice.pls` (36 rules) | `3uSfRsZV5XpeC3fdtKbV` | `jgpS5JvhL4HK73Dxvd4F` | `language_presets.hu.overrides.tts` |
 
-IPA is recorded in comments beside the entries that earn it, so this can be upgraded mechanically
-if a live test shows `eleven_v3_conversational` honours phonemes. Don't assume it does; v3's IPA
-support is the documented reason someone would switch models for this.
+Uploaded as `optofarm-{ro,hu}-voice-2026-09-21` and verified rule-for-rule by downloading them back.
+The `en` preset is deliberately left with an empty locator list: it overrides no voice, so it speaks
+with the Romanian voice and inherits the base dictionary.
+
+**⚠️ `language_presets` REPLACES, it does not merge.** Updating the agent with only the `hu` preset
+silently deleted the `en` preset — and with it the English first message. Caught by diffing the
+response against the pre-update config, and restored in the next call. Always send every preset you
+want to keep, and diff afterwards.
+
+**Older dictionaries exist in this workspace and are NOT attached**: two `optofarm_ro`/`optofarm_hu`
+pairs plus an `optofarm_en`, from earlier work. They are keyed partly on the pre-correction
+spellings — the newest Hungarian one still maps `Anca`, which no tool returns any more. Left alone
+rather than deleted. One idea in them is worth stealing if the listening test wants it: they expand
+titles (`Dr.` → `doctor`, `Prof.` → `profesor`) and alias some whole names
+(`Dr. Baricz Anna` → `doamna doctor Barits Anna`).
+
+## Alias, not phoneme — a default, not a limit
+
+The public docs list phoneme support for `eleven_flash_v2` and `eleven_v3` only, which would exclude
+this agent's `eleven_v3_conversational`. That is not the whole story. The agent carries a
+**`conversation_config.tts.enable_phoneme_tags`** flag — *"Opt-in to SSML phoneme tag handling for V3
+models... phoneme tags, inline and from pronunciation dictionaries, are parsed into inline IPA"* —
+and it is currently **`false`**.
+
+So phonemes are reachable here, one boolean away. Alias remains the default on merit rather than
+necessity: it works whatever that flag says, and a respelling is a smaller judgement call than an
+IPA transcription nobody has heard. IPA sits in the file comments, so the switch is mechanical.
 
 ## Keyed on what the TTS actually receives
 
@@ -82,17 +107,22 @@ needs. The Romanian voice is the one that gets those wrong. Don't "fix" them on 
 Word order is not something a lexicon can fix, so `Str.`/`Bld.` are not aliased in Hungarian
 (which puts `utca` after the street name), and `Gheorghe Doja` is one entry rather than two.
 
-## To deploy
+## To redeploy after an edit
 
-The ElevenLabs MCP connector exposes **no** pronunciation-dictionary tools — checked again
-2026-09-21. Upload is dashboard or REST.
+The MCP connector can **attach** a dictionary (`agents_update` takes
+`pronunciation_dictionary_locators`) but cannot **create** one — there is no upload tool, confirmed
+by reading the connector's schemas rather than searching their names. Uploading needs the REST API
+and an `xi-api-key`:
 
-1. Upload both `.pls` files (ElevenLabs → Pronunciation Dictionaries). Note the returned
-   `pronunciation_dictionary_id` and `version_id` for each.
-2. Attach `ro-voice.pls` to `conversation_config.tts.pronunciation_dictionary_locators`.
-3. Attach `hu-voice.pls` to
-   `conversation_config.language_presets.hu.overrides.tts.pronunciation_dictionary_locators`.
-4. Leave the `en` preset alone — it inherits the base voice and the Romanian dictionary with it.
+```
+POST https://api.elevenlabs.io/v1/pronunciation-dictionaries/add-from-file
+  -H "xi-api-key: $KEY"  -F file=@ro-voice.pls  -F name=optofarm-ro-voice-<date>
+```
+
+Editing a `.pls` means **a new upload and a new `version_id`** — a locator pins a version, so an
+edited file changes nothing until the agent is re-pointed at it. Then re-attach, remembering the
+`language_presets` replace-not-merge trap above, and diff the response against the previous config
+before trusting it.
 
 ## Smoke test — every entry here is a prediction
 
