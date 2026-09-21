@@ -31,8 +31,8 @@ out, in n8n. Evolvo is never written to.
 - **Fails open.** Any exception passes the item through untouched; an unrecognised provider name is
   logged, never raised. A cosmetic rewrite must never drop a call.
 
-**Still open:** `Optometrist Bodi Ildiko` ships as `Bodi Ildikó` — `Ildikó` is certain, `Bodi` vs
-`Bódi` is two different surnames and nobody has confirmed which. One-character fix when they do.
+Confirmed by the clinic the same day: it is **`Bódi`**. `Optometrist Bodi Ildiko` returns as
+`Optometrist Bódi Ildikó`. No open questions remain on the name list.
 
 ## 2026-09-14 (evening) — `slot_released`, and the cancel path from 7 evolvo calls to 3
 

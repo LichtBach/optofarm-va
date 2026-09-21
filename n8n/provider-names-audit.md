@@ -28,7 +28,7 @@ guessed.
 | 10 | `Dr. Rotar Simona` | `Dr. Rotar Simona` | certain | RO, already correct |
 | 11 | `Dr. Tripon Robert` | `Dr. Tripon Robert` | certain | RO, already correct |
 | 12 | `Dr. Zait Natalia` | `Dr. Zaiț Natalia` **or** `Dr. Zait Natalia` | **unsure — ask her** | `Zaiț` and `Zait` are both real surnames. Do not guess |
-| 13 | `Optometrist Bodi Ildiko` | `Optometrist Bódi Ildikó` **or** `Optometrist Bodi Ildikó` | `Ildikó` certain, `Bódi` **unsure — ask her** | HU. `Ildikó` always carries the `ó`. `Bodi` vs `Bódi` are two different surnames |
+| 13 | `Optometrist Bodi Ildiko` | `Optometrist Bódi Ildikó` | **confirmed by the clinic 2026-09-21** | HU, both `ó` restored |
 | 14 | `Optometrist Dan Laura` | `Optometrist Dan Laura` | certain | RO, already correct |
 | 15 | `Optometrist Ifj Jeremias Laszlo` | `Optometrist Ifj. Jeremiás László` | high | HU `á`, `ó`. **Note the missing period after `Ifj`** |
 | 16 | `Optometrist Jeremias Zoltan` | `Optometrist Jeremiás Zoltán` | high | HU `á`, `á` |
@@ -71,7 +71,8 @@ export in this repo.
 
 The clinic's call: **Anca → Anica, and Hungarian names get their diacritics back. Nothing else
 changes.** Romanian names keep their stripped spellings deliberately (`Ormenisan`, `Zait` stay as
-they are), so questions 6 and 12 above are closed as "leave it".
+they are), so questions 6 and 12 above are closed as "leave it". Question 13 is answered: it is **`Bódi`**,
+confirmed by the clinic. Nothing on the name list is open any more.
 
 Shipped as four `Display Names` nodes in the live workflow — see the
 [changelog](CHANGELOG.md) and [`display-names.node.js`](display-names.node.js). The five strings that
@@ -81,7 +82,7 @@ change:
 |---|---|
 | `Dr. Ilovan Anca` | `Dr. Ilovan Anica` |
 | `Dr. Prof. Szekely Attila  - Consiliere / Terapie psiho-ortoptica` | `Dr. Prof. Székely Attila - Consiliere / Terapie psiho-ortoptica` |
-| `Optometrist Bodi Ildiko` | `Optometrist Bodi Ildikó` |
+| `Optometrist Bodi Ildiko` | `Optometrist Bódi Ildikó` |
 | `Optometrist Ifj Jeremias Laszlo` | `Optometrist Ifj. Jeremiás László` |
 | `Optometrist Jeremias Zoltan` | `Optometrist Jeremiás Zoltán` |
 

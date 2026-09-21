@@ -20,7 +20,7 @@ const norm = s => (s || '').toString().toLowerCase().normalize('NFD')
 // (clinic's call, 2026-09-21) — only Hungarian names get their diacritics back.
 const DISPLAY = {
   'dr. ilovan anca': 'Dr. Ilovan Anica',                                   // wrong given name, not a diacritic
-  'optometrist bodi ildiko': 'Optometrist Bodi Ildikó',                    // Bodi vs Bódi still unconfirmed
+  'optometrist bodi ildiko': 'Optometrist Bódi Ildikó',
   'optometrist ifj jeremias laszlo': 'Optometrist Ifj. Jeremiás László',   // note the restored period
   'optometrist jeremias zoltan': 'Optometrist Jeremiás Zoltán',
   // Both the split form (what the tools return) and the full raw form (what evolvo stores).
