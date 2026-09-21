@@ -4,6 +4,54 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-21 (evening) — Republicii transfer number; all surgery questions route to Bulevard
+
+Live version `agtvrsn_5901m320e9hdehya8bf5b3bknqvq`. Eleven transfer routes, up from nine.
+
+### Republicii
+
+`+40 365 430 939` added as its own destination, matching the number already in the knowledge base
+(note the 0365 prefix — every other branch is 0265). The general number's condition no longer names
+Republicii as a fallback.
+
+### Surgery → Bulevard, and why it needed more than a knowledge base line
+
+The instruction was *"ha valaki műtétekről érdeklődik, kapcsoljon a bulevardra"*. Putting that only in
+the knowledge base would not have worked: the Bulevard transfer condition fires on **the caller asking
+to be put through to Bulevard**, and someone asking *"cât costă operația de cataractă?"* does not match
+it. The knowledge base can tell the agent where the answer lives; only a transfer condition can send
+the call there.
+
+So surgery is now its own route, second in the list, immediately after the emergency route:
+
+> *Not an emergency, and the caller is asking about a surgical operation: a cataract operation, having
+> an operation at all, what an operation costs, booking or scheduling one, whether they are suitable
+> for one, or recovery afterwards. Every surgery question goes to the Bulevard branch, whatever branch
+> the caller named or did not name.*
+
+Placing it above the per-branch routes matters: a caller who mentions Poștei and then asks about
+surgery still reaches Bulevard. Every branch condition below it now begins "Not an emergency and not
+about surgery", so the ordering is stated rather than left to evaluation order.
+
+Section 14 of both knowledge base documents was rewritten to match, and widened from cataract to
+surgery in general — `## 14. Operații — toate întrebările merg la Bulevard` /
+`## 14. Műtétek — minden kérdés a Bulevardra megy`. It keeps the two facts the agent may state
+(facoemulsificare, 3000 lei per eye), then sends everything else — date, price, eligibility, waiting
+time, recovery — to Bulevard, with the branch's number and a callback offer as the fallback when it is
+closed or the transfer fails.
+
+| document | before | after |
+|---|---|---|
+| RO FAQ | 13,390 B | 13,734 B |
+| HU FAQ | 13,326 B | 13,624 B |
+
+### Still open from the previous entry
+
+Call screening remains unavailable (`transfer_screening_not_enabled`), so the caller still hears the
+handoff summary — now on eleven routes rather than one, including every surgery enquiry. That raises
+the stakes slightly: a patient asking about a cataract operation hears Ana summarise their question to
+the Bulevard colleague. Worth weighing when deciding whether to ask ElevenLabs to enable the feature.
+
 ## 2026-09-21 (later) — branch transfer numbers; per-language pronunciation confirmed possible
 
 Live version `agtvrsn_6801m31zd8a9ezgswdem1wszynqs`.
