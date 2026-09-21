@@ -3,6 +3,28 @@
 Newest first. Every entry is a change to the live workflow **Optofarm - WIP**
 (`jLUnlrt9zM8VWZvp`) on `https://n8n.splitagency.biz.id`.
 
+## 2026-09-21 (last) — the evolvo API key is out of the workflow, and the export is current again
+
+The manual tester's `get_auth.php` node carried the evolvo API key as a literal
+`Authorization: Bearer 94f0a111…` header — the reason the export in this repo had been left stale
+through four rounds of changes rather than refreshed into a public repository.
+
+- **Fixed at the source, not redacted.** That node now authenticates exactly like the other eleven:
+  `genericCredentialType` / `httpHeaderAuth` against the existing `Evolvo API Key` credential
+  (`6RTMIBHJ3mUJZe7U`). 12 nodes now use it. The key is gone from the live workflow entirely,
+  including n8n's own `activeVersion` snapshot — so exports are clean by construction from here on
+  and there is nothing left to remember to strip.
+- **One hardcoded secret in 126 nodes**, confirmed by scanning every node parameter. Every other
+  `Authorization` header is a runtime expression referencing a session token; the six webhooks
+  authenticate through a credential, not a literal.
+- **The export is refreshed and current** — 126 nodes, including `splitName`, the four
+  `Display Names` nodes and the `PHRASES`/`NOISE` matcher work. It had been stuck at 115.
+- **Export only `name`/`nodes`/`connections`/`settings`.** A raw `GET` also returns `staticData`
+  (which holds a **live evolvo session token**), `activeVersion` (a mirror of `nodes`, where a
+  secret redacted from `nodes` alone would survive) and `shared` (owner account details). Written
+  down in the README so the next person does not have to rediscover it.
+- Smoke-tested after the deploy: CA, the Hungarian branch match, and FIND all still correct.
+
 ## 2026-09-21 (later still) — a Hungarian caller can name a branch in Hungarian
 
 `CA Match Calendars` and `BOOK Match Calendars` only rewrote a branch alias when it was the
