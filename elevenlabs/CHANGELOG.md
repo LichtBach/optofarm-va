@@ -4,6 +4,83 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-22 — the surgery list, and optometrists lose their title
+
+Two client instructions, both narrow and both about restraint rather than new capability.
+
+### The list of surgeries
+
+The confirmed list now lives in section 14 of both FAQ documents, RO and HU, behind an explicit gate:
+
+> Dacă — și NUMAI dacă — apelantul întreabă explicit ce fel de operații se fac, citește lista de mai
+> jos ca pe o simplă enumerare. La orice altă întrebare despre operații nu o pomeni deloc: nici când
+> întreabă de o operație anume, nici de preț, nici de programare, și niciodată din proprie inițiativă.
+
+The client was explicit that this must not leak: *"you are not to talk about them directly when
+someone asks about a surgery, only mention these when the user explicitly asks about what kind of
+surgeries are done."* So the gate is stated twice — once as the condition, once as the closing rule
+that forbids explaining any item, saying who it suits, or suggesting the caller needs one. The
+transfer to Bulevard still governs afterwards, unchanged; the list is read, then the call goes
+through, exactly as every other surgery question already did.
+
+| Romanian | Hungarian |
+|---|---|
+| Operație de cataractă, cu cristalin artificial multifocal sau cu cristalin artificial foldabil cu filtru galben | Szürkehályog-műtét, multifokális műlencsével vagy sárga szűrős, hajlítható műlencsével |
+| Pterigion | Pterygium (szárnyas hályog) |
+| Ectropion | Ektropium |
+| Entropion | Entropium |
+| Șalazion | Chalazion (jégárpa) |
+| Tumori palpebrale, și tumori palpebrale cu plastie | Szemhéjdaganatok, és szemhéjdaganatok plasztikával |
+| Blefarosalozis | Blefaroszalózis |
+| Xantelasma, și xantelasma extinsă | Xanthelasma, és kiterjedt xanthelasma |
+
+Three editorial decisions, all reversible, all flagged to the client:
+
+- **`Pterigion` appeared twice** in the source list. Listed once.
+- **`Salazion` → `Șalazion`.** The rest of the client's list carries diacritics (`Operație`,
+  `cataractă`, `extinsă`), and the Romanian term for a chalazion is *șalazion*. Read aloud, the
+  missing ș is audible.
+- **`Blefarosalozis` left exactly as written.** It is probably *blefarocalazis* (blepharochalasis),
+  but "probably" is not good enough for a clinical term the agent will speak to a patient. Naming a
+  different procedure is a worse failure than mispronouncing this one, so it stands until the client
+  confirms.
+
+The two artificial-lens entries were folded into the cataract line rather than listed as separate
+operations — they are lens choices within that operation, not procedures of their own.
+
+### Optometrists are named without a title
+
+The client: *"in case of the optometrists the title shouldn't be mentioned when people ask about who
+is working at a certain location, you should only mention the title 'optometrist' if the user asks
+about it."*
+
+This mattered more than it looks, because **evolvo stores the title in the name**: the roster work
+yesterday confirmed calendars named `Optometrist Bódi Ildikó`, and `provider_type` is a separate
+field the agent was previously told to turn into a spoken title. So two things had to change
+together — stop adding a title, and stop reading the stored one.
+
+| Where | Before | After |
+|---|---|---|
+| Prompt, Doctors and optometrists | *give the person the matching title in the caller's language* | *A doctor gets the doctor title in the caller's language. An optometrist gets no title at all: say the bare name. Say the word optometrist only if the caller asks what that person is or whether they are a doctor.* |
+| Prompt, same paragraph | *The "Dr." or "Optometrist" written in front of the name is how the system stores it, not how you say it.* | *…not how you say it; never read "Optometrist" out.* |
+| Prompt, who-works-at-a-branch | *name at most three of the people returned, each with the title their provider_type gives* | *…doctors with their title and optometrists by name alone* |
+| FAQ §23, RO and HU | *I se spune „doamna optometristă"* / *Őt „optometristának" nevezed* | replaced by the bare-name rule plus the ask-first exception |
+
+The safety rule underneath is untouched and still absolute: **never put Dr. or medic in front of an
+optometrist's name**, and if the caller asks whether that person is a doctor, the answer is that they
+are an optometrist, never that they are a doctor. Dropping the title makes the agent quieter, not
+vaguer — the general statement *"szemorvosok és optometristák"* still stands when it is talking about
+the staff as a whole rather than naming anyone.
+
+### Live state
+
+Prompt 20,454 characters (version description: *Optometrists are named without a title unless the
+caller asks what they are*), RO FAQ 15,166 B, HU FAQ 15,058 B. All three re-fetched and compared
+against the repository mirrors afterwards; the prompt is byte-identical and both FAQ documents differ
+only by the trailing newline the API strips. The agent's phone number `+40373800850` was re-checked
+after the prompt update — the update response reports an empty `phone_numbers` array, which is an
+artifact of that endpoint, not a detachment.
+
 ## 2026-09-21 (night, after the dictionary upload) — "no mention of this being a clinic, in any language"
 
 The client's instruction before smoke-testing, verbatim: *"MAKE SURE we have no mention of this being
