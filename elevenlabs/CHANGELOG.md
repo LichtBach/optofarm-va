@@ -4,6 +4,111 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-25 (later) — the optometrist title, Hungarian-speaking colleagues, and a wrong "nothing free"
+
+Three defects from the same seven transcripts, all of them things the agent said that it should not
+have said, or did not say that it should have.
+
+### 1. The optometrist title, third attempt
+
+The 22 September rule was live and still lost twice in one day:
+
+> *"Jeremiás Zoltán **optometristához** a legkorábbi időpont…"* — `conv_2501`, 22:42
+> *"la **optometristul** Ifj. Jeremiás László"* — `conv_5501`, 13:38
+
+Note where the word sits: once after the name with a Hungarian case ending glued on, once in front in
+Romanian. The old rule said *"An optometrist gets no title at all: say the bare name"* and
+*"never read 'Optometrist' out"* — both of which a model can satisfy while still generating the word
+itself as a natural appositive, which is exactly what happened.
+
+Worse, the `evolvo_check_availability` description said, at the moment the result arrives:
+
+> provider_type (doctor, optometrist or vision_therapy: **title the person by this field**, never by
+> the name)
+
+That is an instruction to attach a title. For an optometrist there is no title to attach. It is the
+most likely single cause and it is gone.
+
+Four changes, so the rule is in front of the model at every point it could go wrong:
+
+| Where | What it now says |
+|---|---|
+| Prompt, Doctors and optometrists | *"An optometrist is a bare name and nothing else: no word in front of it, no word after it, in any language… Say 'Jeremias Zoltanhoz', never 'Jeremias Zoltan optometristahoz'; say 'la Jeremias Laszlo', never 'la optometristul Jeremias Laszlo'; say 'with Bodi Ildiko', never 'with the optometrist Bodi Ildiko'."* |
+| Prompt, Guardrails | *"Never say the word optometrist, or any translation of it, next to a provider's name: not in front, not after, not as a suffix. The name alone."* |
+| `evolvo_check_availability` description | the naming rule with the same examples, at the point of use |
+| FAQ §23, RO and HU | the wrong/right example in that language |
+
+The wrong/right pairs matter more than another prohibition. Two rounds of prohibitions did not hold;
+a concrete string the model can pattern-match against has a better chance.
+
+**The structural fix is on the n8n side and is requested, not done.** `CA Display Names` returns
+`Optometrist Jeremiás Zoltán` — the word is in the model's input, and asking it to delete a word it
+can see, every turn, is the weakest guarantee available. Stripping the prefix and letting
+`provider_type` carry the distinction is the strong one. Written up in
+[`../n8n/REQUESTS_FROM_ELEVENLABS.md`](../n8n/REQUESTS_FROM_ELEVENLABS.md) with the exact mapping.
+
+### 2. Hungarian names mean Hungarian speakers
+
+`conv_2601`: the caller asked for a Hungarian-speaking doctor. The agent answered *"Dr. Tripon Robert
+beszél angolul, de sajnos nincs információ arról, hogy melyik orvos beszél magyarul"* — volunteered
+an irrelevant fact about English, then said it did not know. The caller rang off.
+
+The client's instruction: a Hungarian name obviously means a Hungarian speaker. Of the seventeen
+calendars in the roster, six carry Hungarian names — **Baricz Anna, Elekes Ella, Dr. Prof. Székely
+Attila, Bódi Ildikó, Ifj. Jeremiás László, Jeremiás Zoltán**. Those five surnames are named in the
+prompt and in §23 of both FAQ documents as the anchor, with the rule stated generally so it survives
+a roster change:
+
+> Which languages a colleague speaks is not in the scheduling system, but a Hungarian name is a
+> Hungarian speaker… Say that only when the caller asks for someone who speaks Hungarian, and never
+> volunteer it. A Romanian name proves nothing either way: never tell a caller that anyone does not
+> speak Hungarian.
+
+Two deliberate limits. **It never runs backwards** — this is Transylvania, and plenty of colleagues
+with Romanian names speak Hungarian; the agent may offer the Hungarian-named ones and must not
+characterise anybody else. And it is **answer-only**: the conv_2601 failure was partly volunteering
+the English fact unasked, so the Tripon Robert line was changed the same way, from *"this is the only
+language information you have"* to *"say this only if the caller asks for English."* That old clause
+would also have contradicted the new rule outright.
+
+Baricz is the one I am least sure of as a Hungarian name — worth a glance.
+
+### 3. "Nincs szabad időpont", then a slot on that same day
+
+`conv_2501` again. The caller asked whether there was anything free at Poștei tomorrow for a
+szemvizsgálat. The agent said no, earliest 1 October. Four turns later it offered Jeremiás Zoltán at
+Poștei **tomorrow at nine**, and the caller caught it:
+
+> *"Már az előbb kérdeztem, s azt mondtad, hogy nincs szabad hely a holnapi nap Posta utcában."*
+
+Both answers were true. The first search had `provider_type: doctor` and there genuinely was no
+doctor; the optometrist had times all along. The cause was one clause in the `provider_type`
+parameter description, which listed **"a bare check-up ('un control', 'kontroll' with nothing
+further)"** under the `doctor` default. A plain *szemvizsgálat* is not a doctor-only visit — the
+knowledge base has said for months that optometrists do eye examinations too.
+
+That clause is removed, replaced by an explicit leave-it-out:
+
+> LEAVE IT OUT for a plain eye examination with no symptom and nobody named - 'szemvizsgalat', 'o
+> consultatie', 'un control', 'kontroll', 'an eye test' with nothing further: doctors and
+> optometrists both do those, and narrowing to one kind is exactly how a caller gets told a branch
+> has nothing free on a day when the other kind had times.
+
+The `doctor` default is otherwise intact — symptom, disease, OCT, eye pressure, screening, a child,
+anything that sounds medical still goes to a doctor. And a backstop for when it does narrow: *"if you
+tell the caller nothing is free, say in the same sentence which kind you looked at"*, in the tool
+description, the prompt and both FAQ documents.
+
+### Live state
+
+Prompt 23,091 characters and byte-identical to the mirror. `evolvo_check_availability` updated (67
+calls of history, unchanged otherwise). RO FAQ 16,729 B, HU FAQ 16,734 B, each the mirror minus the
+trailing newline. Transfer routes, knowledge base attachments, tool ids and language presets all
+re-checked and unchanged.
+
+Still pending from earlier today: the `escalate_to_human` trigger is saved and compiled but **not
+published** — that needs one click in the dashboard.
+
 ## 2026-09-25 — products and a caller's own order stop dead-ending in a callback
 
 Seven real call transcripts from 24 September, in [`../transcripts/`](../transcripts/). Two of them

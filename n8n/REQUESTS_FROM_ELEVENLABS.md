@@ -5,6 +5,53 @@ from ElevenLabs; this is the other direction. Newest first.
 
 ---
 
+## 2026-09-25 — please stop returning the word "Optometrist" inside the provider name
+
+Two live transcripts from 24 September, after the rule was already in place:
+
+> *"Jeremiás Zoltán **optometristához** a legkorábbi időpont…"* (`conv_2501`, 22:42)
+> *"la **optometristul** Ifj. Jeremiás László"* (`conv_5501`, 13:38)
+
+The client's instruction is that this must not happen at all. We have tightened it in three places on
+our side — the prompt paragraph now carries wrong/right examples in each language, the Guardrails
+section has a hard never, and the `evolvo_check_availability` description no longer says "title the
+person by this field", which was itself telling the model to attach a title.
+
+**But the name you return still contains the word.** `CA Display Names` maps
+`'optometrist jeremias zoltan'` to `'Optometrist Jeremiás Zoltán'`, and the model is reading it back.
+Asking an LLM to delete a word it can see in its own input, on every turn, is the weakest kind of
+guarantee; not putting the word there is the strong one.
+
+### The request
+
+In the four `* Display Names` nodes, strip a leading `Optometrist ` (and `Dr. ` is fine to keep —
+that one IS spoken) from the value written into `doctor` / the name fields, and let `provider_type`
+carry the distinction, which it already does. So:
+
+| evolvo stores | you return today | please return |
+|---|---|---|
+| `optometrist bodi ildiko` | `Optometrist Bódi Ildikó` | `Bódi Ildikó` |
+| `optometrist ifj jeremias laszlo` | `Optometrist Ifj. Jeremiás László` | `Ifj. Jeremiás László` |
+| `optometrist jeremias zoltan` | `Optometrist Jeremiás Zoltán` | `Jeremiás Zoltán` |
+| `optometrist dan laura` | `Optometrist Dan Laura` | `Dan Laura` |
+| `dr. ilovan anca` | `Dr. Ilovan Anica` | unchanged |
+
+Matching should keep accepting the prefixed form on the way **in** — callers do not say it, but the
+`doctor` parameter description tells the agent the prefix is optional, and evolvo's own calendar
+names still carry it. This is only about what comes back.
+
+If the prefix is load-bearing somewhere we cannot see, say so and we will leave the guardrails to do
+the work.
+
+### While you are in those nodes
+
+Nothing else needed, but for context: `provider_type` is what we now tell the agent to read for how
+to name someone, and we have stopped it defaulting to `doctor` for a plain `szemvizsgálat` — that
+default is why a caller was told nothing was free at Poștei on a day when an optometrist there had
+times (`conv_2501`). No n8n change needed for that one; it was our tool description.
+
+---
+
 ## 2026-09-21 — please stop calling Optofarm a clinic in tool responses
 
 Direct instruction from the client, ahead of a smoke test: *"MAKE SURE we have no mention of this
