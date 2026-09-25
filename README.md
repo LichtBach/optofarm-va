@@ -203,9 +203,14 @@ reads the history can create or cancel real patient appointments. The evolvo key
 by evolvo's IP whitelist.
 
 Recommended, in order: **rotate the n8n webhook secret** (n8n credential "Optofarm Webhook Secret",
-then update the secret on each ElevenLabs tool — the two must change together or live calls break);
-**rotate the evolvo API key** with dRoot Solutions; then decide whether to purge the history or make
-the repository private.
+then edit that one ElevenLabs workspace secret's value in place — the two must change together or
+live calls break); **rotate the evolvo API key** with dRoot Solutions; then decide whether to purge
+the history or make the repository private. Purging is not a substitute for rotating: anyone may
+already have a clone.
+
+**Exact places, both sides, in [`CREDENTIAL-ROTATION.md`](CREDENTIAL-ROTATION.md).** Note that the
+ElevenLabs end is a single workspace secret that all five tools reference, not five separate edits —
+an earlier version of this line said otherwise.
 
 Nothing in this repository should contain a credential. Names of n8n credentials are fine; their
 values are not.

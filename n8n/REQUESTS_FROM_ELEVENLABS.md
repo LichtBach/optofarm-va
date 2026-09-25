@@ -96,10 +96,11 @@ something we can fix from our side:**
 
 ### One thing to be aware of before any credential work
 
-The workspace migration means the ElevenLabs tools now reference a **different workspace-secret
+The workspace migration means the ElevenLabs tools reference a **different workspace-secret
 record** from the one they used before. Calls are succeeding today, so the value evidently still
-matches what n8n expects — but it does mean **rotating the webhook secret is now a two-sided,
-coordinated change**, not a one-line edit on either side. The old workspace's value is in this
+matches what n8n expects. Rotating the webhook secret was always a two-sided, coordinated change —
+the migration only moves which secret store the ElevenLabs half lives in. Exact places for both
+sides are in [`../CREDENTIAL-ROTATION.md`](../CREDENTIAL-ROTATION.md). The old workspace's value is in this
 repository's public git history and still needs rotating, together with the evolvo API key. Please
 do not rotate either one unilaterally; say when you are ready and we will change both ends together.
 
