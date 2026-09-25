@@ -1,8 +1,98 @@
 # ElevenLabs changelog
 
-Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO*). Tools are
+Newest first. Agent `agent_5301m37q64aye28t44vx4cbmtkv7` (*Optofarm - Live*), branch
+`agtbrch_9201m37q66bbfzr8cz7jed22d9ff`, in the `optofarm@splitagency.eu` workspace. Tools are
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
+
+**Entries dated 2026-09-21 to 2026-09-25 (earlier) were written against the previous agent,
+`agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO*), in the `zoli@splitagency.eu`
+workspace. That agent has taken no calls since 23 September 20:13 and is not what the phone
+number rings. See the migration entry below.**
+
+## 2026-09-25 (night) — the work had been going to a dead agent; everything re-applied to *Optofarm - Live*
+
+### What happened
+Optofarm migrated to a second ElevenLabs workspace (`optofarm@splitagency.eu`) on 23 September.
+The agent this repository had been editing all week, *Optofarm Agent - DEMO*
+(`agent_3101kyq03vpxfpb9vsskgfh2f0bd`), stayed behind in the old workspace. Its last call was
+**23 September 20:13**. The live agent is *Optofarm - Live* (`agent_5301m37q64aye28t44vx4cbmtkv7`,
+branch `agtbrch_9201m37q66bbfzr8cz7jed22d9ff`), and **+40373800850** is attached to that one.
+
+Three rounds of work — the clinic sweep, the surgery list and optometrist title, and the
+products/own-order routing — went to the DEMO agent and reached no caller.
+
+### The mistake, plainly
+When the 24 September transcripts arrived they were labelled *Optofarm - Live* while the agent I
+was editing was *Optofarm Agent - DEMO*. I noticed the mismatch, talked myself out of it on weak
+evidence (a similar 7-day call count, and content that matched my own edits), **and did not
+mention it**. The decisive fact was available and I did not check it: the DEMO agent's last call
+predated every transcript by a day. The cost was three rounds of work applied to nothing, and a
+week in which the live agent was still saying "clinic".
+
+The lesson for next time is mechanical, not attitudinal: **when a transcript's agent name does not
+match the agent being edited, compare last-call timestamps before doing anything else.** A name
+mismatch is never cosmetic.
+
+### Re-applied to the live agent, each verified against the repo mirror
+| What | Result |
+|---|---|
+| System prompt | Pushed; byte-for-byte `diff` against `system-prompt.main.txt` clean, 23,090 chars |
+| `transfer_to_number` | 11 routes; routes 3–10 carry `own-order=True`, route 11 carries `product=True` |
+| `evolvo_check_availability` (`tool_0501m37qnydcf7rrts5fvn7ta885`) | Both fixes live; workspace secret and 19 calls of usage history intact |
+| RO FAQ (`fDVyOHQuc0E2o6N9UaTz`) | Live 16,729 B = mirror 16,730 − 1 |
+| HU FAQ (`8SUjgTNFTNLTq5ffiwB3`) | Live 16,734 B = mirror 16,735 − 1 |
+
+The one-byte shortfall is the API stripping the trailing newline, and is the same signature every
+knowledge-base push in this changelog has been verified by.
+
+Knowledge base 7 documents, 5 tools, language presets `en` + `hu`, voice unchanged after every push.
+
+**The promotions documents were deliberately left alone**, as instructed. They are ~173 B *larger*
+in the new workspace than the repo mirrors, which means somebody edited them there after the
+migration. The repo mirrors are therefore stale for those two documents and should be re-pulled
+before anyone edits them, not overwritten from here.
+
+### `escalate_to_human` — narrowed, and **waiting on one click**
+The deterministic trigger still named both of the cases the prompt now handles by transferring, and
+a procedure trigger fires ahead of any prompt or knowledge-base text — so the prompt edits alone
+would have lost to it. The trigger now reads:
+
+> The caller asks a price that is not in your prompt, complains about glasses already made, makes a
+> wholesale, factory or partnership enquiry, or simply asks to be called back. Do NOT start this
+> procedure for a question about what products the shops carry, or whether something is in stock,
+> and do NOT start it for a question about the caller's own order - their glasses, lenses or
+> anything else made for them, whether it is ready or what stage it is at. Your system prompt
+> handles those two by putting the caller through to a colleague. Start this procedure for one of
+> those only once the branch is closed, or a transfer has failed, and the caller has accepted a
+> callback.
+
+The three steps are unchanged; only the trigger moved. Saved as a draft on
+`agtprc_4401m37qpbrjf7588ypqash4m05y` and mirrored at
+`elevenlabs/procedures/escalate_to_human.pending-publish.json`.
+
+**It is not live yet.** `agents_compile_procedures` returned a workflow carrying the new trigger,
+but it does not commit: afterwards `has_draft` is `true`, the procedure's `version_id` is unchanged,
+and grepping the agent's live `workflow` still finds the old wording and none of the new. This is
+the same behaviour seen on the old account, so it is the MCP surface, not the account. There is no
+commit-draft call exposed, and `agents_create_draft` wants the entire `conversation_config` +
+`platform_settings` + `workflow` (134 KB), which will not fit in a tool argument.
+
+**Someone has to press publish in the dashboard: *Optofarm - Live* → Main branch → Procedures.**
+Until then the agent still takes a callback for product and own-order questions, and the prompt,
+FAQ and transfer-route work on those two cases is inert.
+
+### Still outstanding
+- Rotate the n8n webhook secret. The old workspace's value is in public git history; the new
+  workspace uses a different one, so rotation is now a two-sided change. Rotate the evolvo API key
+  at the same time.
+- n8n: strip the `Optometrist ` prefix from provider names in the four `* Display Names` nodes.
+  That is the structural fix; the prompt rule is only a guard in front of it.
+- n8n: the 11 remaining "clinic" strings, five of which begin "Tell the caller…".
+- Two leftover TEST bookings for Imreh to delete.
+- Promotion campaign expires 30 September 2026.
+- The glossaries in the new workspace are ~15 B smaller than the repo mirrors. Not investigated —
+  outside what was authorised tonight, and worth a look before anyone edits them.
 
 ## 2026-09-25 (later) — the optometrist title, Hungarian-speaking colleagues, and a wrong "nothing free"
 
