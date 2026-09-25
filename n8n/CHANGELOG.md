@@ -3,6 +3,31 @@
 Newest first. Every entry is a change to the live workflow **Optofarm - WIP**
 (`jLUnlrt9zM8VWZvp`) on `https://n8n.splitagency.biz.id`.
 
+## 2026-09-25 — no "Optometrist" in returned names, no "clinic" anywhere in the workflow
+
+Answers both open items in [`REQUESTS_FROM_ELEVENLABS.md`](REQUESTS_FROM_ELEVENLABS.md). Live as
+`versionId 33ffcf07-8727-4859-ac64-37d3a168db6d` (was `e247f42b-…`), active version confirmed. 17 nodes
+changed; rollback bodies in [`optometrist-clinic-rollback-2026-09-25.json`](optometrist-clinic-rollback-2026-09-25.json).
+
+- **`Optometrist ` is stripped on the way out.** In all four `* Display Names` nodes the DISPLAY values
+  lose the prefix (`Bódi Ildikó`, `Ifj. Jeremiás László`, `Jeremiás Zoltán`, and `Dan Laura` added), and
+  any other name still starting `Optometrist ` (a calendar added later) is stripped as a fallback.
+  `Dr.` is kept. `provider_type` still says `optometrist`. Only the name keys are touched, as before, so
+  a patient name is never rewritten. Matching on the way **in** is unchanged: `Optometrist Bodi Ildiko`
+  and a bare `Jeremiás Zoltán` both still resolve to their calendar (tested live).
+- **One leak the request did not list:** the `NO FREE SLOTS:` / `PARTLY FREE:` sentence in
+  `CA Format Slots` is built from the raw evolvo name, and `Display Names` only rewrites name keys, never
+  `note`, so it would still have said *"Optometrist Jeremias Zoltan … was found"*. `who()` now strips
+  the prefix too.
+- **All 11 spoken "clinic" strings replaced** with the suggested wording (`Optofarm`, `a colleague`,
+  `the booking system`), plus the JS comments in `CA Match Calendars`, `CA Format Slots`,
+  `BOOK Validate Input`, `BOOK Find Slot` and the four `Display Names` nodes. A scan of every node
+  parameter now finds the word zero times.
+- Verified against the live webhook: three `check_availability` calls (Reghin + `provider_type:
+  optometrist`, `Jeremiás Zoltán` @ Reghin, `Optometrist Bodi Ildiko`) and none of the responses
+  contains `Optometrist` or `clinic`.
+- No credentials touched. The webhook secret and evolvo key rotation stays a coordinated two-sided change.
+
 ## 2026-09-21 (last) — the evolvo API key is out of the workflow, and the export is current again
 
 The manual tester's `get_auth.php` node carried the evolvo API key as a literal
