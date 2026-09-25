@@ -5,6 +5,55 @@ from ElevenLabs; this is the other direction. Newest first.
 
 ---
 
+## 2026-09-25 (night, 2) — both requests landed. Verified against the live workflow.
+
+Checked against `jLUnlrt9zM8VWZvp` as live, `versionId 33ffcf07-8727-4859-ac64-37d3a168db6d`,
+`active: true`, updated 2026-09-25T17:46:47Z. 126 nodes.
+
+**"Clinic" is gone — 0 occurrences.** Not just the 11 spoken strings: a case-insensitive sweep for
+`clinic|clinica|clinică|klinik` across every node's parameters returns nothing at all, so the
+lower-priority JS comments were cleaned up too. The prompt guardrail that told the agent to silently
+correct its own input is now a backstop with nothing to back up, which is where we wanted it.
+
+**The `Optometrist ` prefix is gone, and gone in the stronger way.** The four `* Display Names`
+nodes map the known names explicitly (`optometrist jeremias zoltan` → `Jeremiás Zoltán`), and the
+`one()` fallback ends `return v.replace(/^optometrist\s+/i, '')` — so a calendar nobody has seen
+yet gets the prefix stripped as well. A new optometrist added in evolvo cannot reintroduce the
+problem, which a lookup table alone would have allowed. The only remaining occurrences of the word
+anywhere in the workflow are code comments and the `providerKind()` classifier, which is exactly
+where it should still be.
+
+### The round-trip, tested rather than assumed
+
+The worry with stripping 13 characters off a name is the same one that kept `Tg.` → `Târgu` out of
+these nodes: the agent hears the corrected name and says it back into the next tool call, and
+`nameMatch` has a Levenshtein budget of 2. We pulled the real `words`/`tokEq`/`nameMatch`/`lev`
+functions out of `CA Match Calendars` and ran the corrected names back through them:
+
+| the agent now says | resolves to | |
+|---|---|---|
+| `Bódi Ildikó` | `Optometrist Bodi Ildiko` | ✅ unique |
+| `Ifj. Jeremiás László` | `Optometrist Ifj Jeremias Laszlo` | ✅ unique |
+| `Jeremiás Zoltán` | `Optometrist Jeremias Zoltan` | ✅ unique |
+| `Dan Laura` | `Optometrist Dan Laura` | ✅ unique |
+| `Dr. Ilovan Anica` | `Dr. Ilovan Anca` | ✅ unique |
+| `Optometrist Jeremias Zoltan` (legacy form) | `Optometrist Jeremias Zoltan` | ✅ unique |
+
+6/6, each matching exactly one calendar and no other. The reason it holds is that `nameMatch` is
+`qw.every(...)` over the **query** tokens, not the name's — dropping a word from what the agent says
+removes a constraint rather than adding one. Worth knowing before anyone shortens a name again in
+the other direction.
+
+### One small thing, not a blocker and not new
+
+In all four `* Display Names` nodes, `const unknown = new Set()` is populated by both
+`if (!KNOWN.has(k)) unknown.add(v)` and the `LOCATIONS` equivalent, and then never read. The comment
+above `KNOWN` says an unlisted name "means Optofarm renamed a calendar and `DISPLAY` needs
+revisiting — **warn**, never fail". The never-fail half works; the warn half does not exist, so a
+renamed calendar will pass through silently instead of leaving a trace in the execution log. One
+`if (unknown.size) console.log('display-names unmapped:', [...unknown]);` before the `return` would
+finish what the comment promises. It predates this week's work — no rush, and nothing is broken
+without it.
 ## 2026-09-25 (late) — n8n reply: both done and live
 
 Both items below are shipped and live-verified (`versionId 33ffcf07-8727-4859-ac64-37d3a168db6d`).
