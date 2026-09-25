@@ -1,0 +1,21 @@
+Conversation ID: conv_2501m3af0te2fmhtkq0qe7462qzf
+Agent: Optofarm - Live
+Date: 9/24/2026, 10:42:00 PM
+Duration: 193s
+
+Conversation Transcript:
+
+Agent: Bună ziua, ați sunat la Optica Optofarm! Sunt Ana, asistentul virtual. Apelul poate fi înregistrat; iar continuând, sunteți de acord. Puteți vorbi cu mine în română, maghiară sau engleză. Cu ce vă pot ajuta?
+User: Îmi place la Optofarm.Szia! Magyarul szeretnék beszélni.
+Agent: Köszönöm szépen, hogy szeret minket! Miben segíthetek Önnek ma?
+User: Meg szeretném kérdezni, hogy a holnapi nap van-e szabad hely a Posta utcai üzletben viz-- szemvizsgálatra?
+Agent: A holnapi napra sajnos nincs szabad időpont a Posta utcai üzletben szemvizsgálatra. A legkorábbi rendelkezésre álló időpont október 1-jén, csütörtökön reggel 9 órakor lenne Dr. Popa Camelia szemorvosnál. Szeretné ezt az időpontot lefoglalni?
+User: Jelenleg az Oltán az mikor lenne szabad hely?
+Agent: A Republicii üzletben (Szentgyörgytéren) a legkorábbi szabad időpont szeptember 28-án, hétfőn reggel 9 órakor lenne Dr. Tripon Robert szemorvosnál. Ugyanezen a napon délután 4 órától Dr. Petrea Alexandra szemorvosnál is vannak időpontok. Szeretné valamelyiket lefoglalni?
+User: Már nékem lesz tamolyi Ernő Zoltán névre, mikor lenne? Jeremiás Zoltánhoz mikor lenne szabad hely?
+Agent: Jeremiás Zoltán optometristához a legkorábbi időpont holnap, szeptember 25-én, pénteken reggel 9 órakor lenne a Posta utcai üzletben. Ugyanő szerdánként Szovátán és csütörtökönként Szászrégenben is fogad. Szeretné a holnapi 9 órás időpontot lefoglalni?
+User: Már az előbb kérdeztem, s azt mondtad, hogy nincs szabad hely a holnapi nap Posta utcában.
+Agent: Elnézést kérek a félreértésért! A holnapi napra szemorvoshoz (Dr. Popa Camelia vagy Dr. Ardelean Adina) nincs szabad hely a Posta utcában, de Jeremiás Zoltán optometristához van holnap reggel 9 órától. Mivel Ön szemvizsgálatra kérdezett rá, és az optometrista is végez szemvizsgálatot (például szemüveghez vagy dioptriaellenőrzéshez), ezért az ő időpontjai is megfelelhetnek. Szeretné lefoglalni a holnapi 9 órás időpontot...
+User: Nem. Nem, mondtad, hogy szerdán Szovátán van Jeremiás Zoltán. Megnézed, hogy mikor van szabad hely?
+Agent: Jeremiás Zoltán optometristához Szovátán a legkorábbi szabad időpont szeptember 29-én, kedden délelőtt 10 órakor lenne. Ugyanezen a napon 10:15, 10:30, 10:45, 11:00, 11:15, 11:30 és 11:45 órakor is van még időpont. Szeretné valamelyiket lefoglalni?
+User: Mám köszönöm, en

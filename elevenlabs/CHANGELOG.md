@@ -4,6 +4,98 @@ Newest first. Agent `agent_3101kyq03vpxfpb9vsskgfh2f0bd` (*Optofarm Agent - DEMO
 workspace-level and therefore live on every branch the moment they are saved; procedures are
 branch-scoped and need a version committed before they reach calls.
 
+## 2026-09-25 — products and a caller's own order stop dead-ending in a callback
+
+Seven real call transcripts from 24 September, in [`../transcripts/`](../transcripts/). Two of them
+show the same shape of failure, and the client's instruction was specific: inside working hours, a
+general product question gets an **offered** transfer to the general number, and a question about the
+caller's own made-to-order item gets the branch asked for and the call **put through without
+offering**.
+
+`conv_0001m39qqj54f0krectkwqapaehr`, 13:55, is the whole problem in three lines:
+
+> **User:** Kész van a szemüvegem?
+> **Agent:** Egy kollégám segít ebben, és visszahívja Önt.
+> **Agent:** Kérem, mondja meg a teljes nevét.
+
+The caller wanted a colleague in a shop who can see the order. What they got was a name-and-number
+form and a promise of a callback, for something a branch could have answered in twenty seconds.
+
+### The cause was not the prompt
+
+`escalate_to_human` is a **deterministic procedure**, and its trigger read, verbatim:
+
+> The caller asks for **the status of glasses already ordered**, asks a price that is not in your
+> prompt, asks **whether a particular frame or lens is in stock**, complains about glasses already
+> made, makes a wholesale, factory or partnership enquiry, or simply asks to be called back.
+
+Both of the client's two cases were written into that trigger. A procedure fires ahead of the system
+prompt, so any amount of prompt or knowledge base text describing the new behaviour would have lost
+to it. The trigger had to change first, and everything else follows it.
+
+### What changed
+
+| Object | Change | State |
+|---|---|---|
+| `escalate_to_human` trigger | order status and stock removed; explicit "do NOT start this procedure for" clause naming both cases; the callback path survives for when the branch is closed | **draft saved and compiled, NOT published** |
+| System prompt | new section `# Products, and orders already placed`; scope item 4 no longer lists order status and stock as callback material | live, 21,713 chars |
+| `transfer_to_number` | all eight branch conditions now also fire on "asking about their own order and has named this branch as where they ordered it"; the general route also fires on an accepted product enquiry; description rewritten to match | live, 11 routes |
+| FAQ §5, RO and HU | "preia cererea de a fi sunat înapoi" → ask which branch, say the colleague working there now can look it up, connect without asking | live |
+| FAQ §11, RO and HU | same treatment — it is the same dead end, on the caller's own frame | live |
+| FAQ §13, RO and HU | stock and general product questions → say you have no product information and offer the transfer; on a yes, the general number | live |
+
+The new prompt section, in full:
+
+> These two are unknowns, but they are not answered like other unknowns. You hold no product
+> information: not what frames, brands, lenses, contact lenses or vitamins a branch carries, not what
+> is in stock, not what any of them costs beyond the knowledge base prices. Never describe, compare
+> or recommend one, and never answer from the glossary instead.
+> Asked in general what the shops carry or whether something is available: say you do not have
+> information on the individual products, and offer to put them through to a colleague; on a yes,
+> transfer to the general number.
+> Asked about their own order - glasses, lenses, anything made for them, whether it is ready, what
+> stage it is at, a problem with it: ask which branch they ordered at, that question alone. When they
+> name it, say the colleague working there now can look it up, and transfer to that branch. Do not
+> ask whether they want transferring and do not take a callback instead: say you are connecting them,
+> and connect them.
+> Both only while that branch is open. Outside its hours, or if a transfer fails, give the branch's
+> direct number from the knowledge base and offer to record a callback request.
+
+Why the branch conditions needed widening rather than new routes: routes 3-10 fired only on *"the
+caller asked to be put through to X"*. Under the new rule the caller never asks to be put through —
+they answer a question about where they ordered. Without the widening the agent would have decided to
+transfer and then found no matching route. Eight conditions changed, none added, so the ordering
+(emergency first, surgery second) is untouched.
+
+§11 was the one judgement call. The client named products in the shop and made-to-order items; §11 is
+about ordering a new clips or temple arm for the caller's own frame, which is neither exactly, but it
+was the identical dead end on the caller's own product. Reverting it is one line in each language.
+
+### Not published: the procedure
+
+`agents_update_procedure_draft` saved the new trigger and `agents_compile_procedures` built a
+workflow that carries it — confirmed by grepping the compiled output, which contains the new text and
+no longer contains the old. But the compile does **not** commit: the branch still reports
+`draft_exists: true` with `last_committed_at` unchanged, and the agent's live `workflow` still holds
+the old trigger. A later `agents_update` (the prompt push) did not commit it either.
+
+There is no commit-draft call on this MCP surface. `agents_create_draft` wants the entire
+conversation_config, platform_settings and workflow in one body, and the compiled workflow alone is
+134 KB — too large to pass as a tool argument. **So the procedure change needs one click in the
+ElevenLabs dashboard: open the agent on Main and publish the pending draft.** Until that happens the
+old trigger is what live calls use, and the two new rules will keep losing to it.
+
+### Also visible in these transcripts, not fixed
+
+- **The optometrist title rule from 22 September is not taking.** `conv_2501` (22:42) says *"Jeremiás
+  Zoltán optometristához"* and `conv_5501` (13:38) says *"la optometristul Ifj. Jeremiás László"*,
+  both after the change went live. The model is still turning `provider_type` into a spoken title.
+- **`conv_2601`**: asked for a Hungarian-speaking doctor, the agent volunteered *"Dr. Tripon Robert
+  beszél angolul"* — true, irrelevant, and the caller hung up. The English fact is offered too eagerly.
+- **`conv_2501`**: the agent said there was nothing free tomorrow at Poștei, then offered a slot
+  there tomorrow. Both were true (no doctor, but an optometrist) and it recovered when challenged,
+  but the first answer should have said so.
+
 ## 2026-09-22 — the surgery list, and optometrists lose their title
 
 Two client instructions, both narrow and both about restraint rather than new capability.

@@ -1,0 +1,16 @@
+Conversation ID: conv_2101m39qmkq5fyet659kp23w2xd1
+Agent: Optofarm - Live
+Date: 9/24/2026, 3:53:23 PM
+Duration: 66s
+
+Conversation Transcript:
+
+Agent: Bună ziua, ați sunat la Optica Optofarm! Sunt Ana, asistentul virtual. Apelul poate fi înregistrat; iar continuând, sunteți de acord. Puteți vorbi cu mine în română, maghiară sau engleză. Cu ce vă pot ajuta?
+User: Köszönöm, csak úgy, de papír alapján.
+Agent: [Enthusiastically] Szívesen! Miben segíthetek ma? Időpontot szeretne foglalni, vagy esetleg más kérdése van?
+User: Szükségessz-- küldött papír a vizsgálathoz?
+Agent: Nem, nem szükséges küldőpapír a vizsgálathoz. Mivel az Optofarmnak nincs szerződése az egészségbiztosítási pénztárral, beutaló nélkül is elvégezzük a szemvizsgálatot.
+
+User: Mennyi idő alatt kapnak a szemüveg-vizsgálat után?
+Agent: A szemüveg elkészülésekor a kollégák telefonon értesítik Önt, hogy mikor veheti át. A pontos időtartam a rendelés típusától függ, de amint kész, azonnal hívják Önt.
+User: Köszönöm.

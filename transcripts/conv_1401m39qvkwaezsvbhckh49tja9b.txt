@@ -1,0 +1,17 @@
+Conversation ID: conv_1401m39qvkwaezsvbhckh49tja9b
+Agent: Optofarm - Live
+Date: 9/24/2026, 3:57:12 PM
+Duration: 88s
+
+Conversation Transcript:
+
+Agent: Bună ziua, ați sunat la Optica Optofarm! Sunt Ana, asistentul virtual. Apelul poate fi înregistrat; iar continuând, sunteți de acord. Puteți vorbi cu mine în română, maghiară sau engleză. Cu ce vă pot ajuta?
+User: Jó napot kívánok! A mitől flexes lencséjűk vannak?
+Agent: Jó napot kívánok! A tükröződésmentes bevonat csökkenti a lencse felületén megjelenő fényvisszaverődést, így élesebb és kényelmesebb látást biztosít.
+
+User: Gyerekek, most menjetek vissza!
+Agent: Elnézést, úgy tűnik, félreértés történt. Miben segíthetek Önnek ma? Időpontot szeretne foglalni, vagy esetleg a szemüveglencsékkel kapcsolatban érdeklődik?
+User: Pamty reflexes lencse van-e?
+Agent: Igen, van tükröződésmentes bevonatú lencsénk, amely csökkenti a fényvisszaverődést és kényelmesebb látást biztosít. A pontos dioptriatartományt és elérhetőséget az üzletben tudják megmondani. Szeretne időpontot foglalni szemvizsgálatra?
+User: Igen.
+Agent: Melyik városban vagy melyik fiókjában szeretne időpontot foglalni? Reghinben, Szovátán, vagy Marosvásárhelyen valamelyikünkben?

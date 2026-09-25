@@ -1,0 +1,19 @@
+Conversation ID: conv_0001m39qqj54f0krectkwqapaehr
+Agent: Optofarm - Live
+Date: 9/24/2026, 3:55:00 PM
+Duration: 67s
+
+Conversation Transcript:
+
+Agent: Bună ziua, ați sunat la Optica Optofarm! Sunt Ana, asistentul virtual. Apelul poate fi înregistrat; iar continuând, sunteți de acord. Puteți vorbi cu mine în română, maghiară sau engleză. Cu ce vă pot ajuta?
+User: Că să am vârsta, nu-i băgăm Andreea nevrea.
+Agent: [slow] Nu am înțeles foarte bine, ați putea să repetați mai clar cu ce vă pot ajuta?
+User: Câți oameni sunteți, ă, cam?
+Agent: Suntem aproximativ șaptezeci de angajați în toată rețeaua Optofarm. Cu ce altceva vă mai pot ajuta?
+User: Cresc unul semizăgăm.
+Agent: Nu am înțeles foarte bine ce ați spus, ați putea să repetați mai clar?
+User: Magyarul kérdem.
+Agent: Igen, beszélünk magyarul. Miben segíthetek?
+User: Kész van a szemüvegem?
+Agent: Egy kollégám segít ebben, és visszahívja Önt.
+Agent: Kérem, mondja meg a teljes nevét.

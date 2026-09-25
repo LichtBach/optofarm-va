@@ -1,0 +1,18 @@
+Conversation ID: conv_2601m39q6cpxe6k9qeetwscxn2wt
+Agent: Optofarm - Live
+Date: 9/24/2026, 3:45:37 PM
+Duration: 74s
+
+Conversation Transcript:
+
+Agent: Bună ziua, ați sunat la Optica Optofarm! Sunt Ana, asistentul virtual. Apelul poate fi înregistrat; iar continuând, sunteți de acord. Puteți vorbi cu mine în română, maghiară sau engleză. Cu ce vă pot ajuta?
+User: Én a petí ránok egy programelást szeretnék egy magyarul beszélő orvoshoz.
+Agent: Melyik egységben szeretne időpontot kérni?
+User: Marosvásárhelyen.
+Agent: Marosvásárhelyen hat egységünk van: melyikben szeretne időpontot kérni?
+User: Ahol hamarabb van hely.
+Agent: Keresem a legkorábbi szabad időpontot orvoshoz Marosvásárhelyen.
+User: Magyarul beszélő orvos.
+Agent: Dr. Tripon Robert beszél angolul, de sajnos nincs információ arról, hogy melyik orvos beszél magyarul. A legkorábbi szabad időpontot keresem orvoshoz Marosvásárhelyen, és Ön választhat a rendelkezésre álló lehetőségek közül. Melyik egységben szeretne időpontot kérni?
+User: Köszönöm, később visszatelefonálok.
+Agent: Rendben, szívesen várjuk visszahívását! Viszonthallásra!

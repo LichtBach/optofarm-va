@@ -1,0 +1,36 @@
+Conversation ID: conv_8201m3a0hsg8fqyrvkt0qtywhd5f
+Agent: Optofarm - Live
+Date: 9/24/2026, 6:29:08 PM
+Duration: 185s
+
+Conversation Transcript:
+
+Agent: Bună ziua, ați sunat la Optica Optofarm! Sunt Ana, asistentul virtual. Apelul poate fi înregistrat; iar continuând, sunteți de acord. Puteți vorbi cu mine în română, maghiară sau engleză. Cu ce vă pot ajuta?
+User: Aș dori o programare.
+Agent: Pentru ce doriți să vă programați?
+User: Cum pentru ce? La Opticom sunat.
+Agent: Înțeleg, doriți o programare pentru un control la ochi. La care locație vă este mai convenabil să veniți? Avem șase puncte de lucru în Târgu Mureș, unul în Reghin și unul în Sovata.
+User: Ăăă, în, ă, pe strada Poștei.
+Agent: Verific programările disponibile la Poștei.
+Agent: Cea mai timpurie programare disponibilă este la doctor Popa Camelia, joi, 1 octombrie, la ora 9:00. Vă convine această dată și oră?
+User: Nu, că o tăc alta după masă. La domnu' doctor Tripun Robert, dacă este.
+Agent: Verific programările pentru doctor Tripon Robert la Poștei.
+
+Agent: Doctor Tripon Robert lucrează la Bulevard și la Republicii, nu la Poștei. Doriți să vă programez la una dintre aceste locații, sau preferați un alt doctor la Poștei?
+User: Nu, atunci la Republicii.
+Agent: Verific programările pentru doctor Tripon Robert la Republicii.
+Agent: Doctor Tripon Robert are programări la Republicii luni, 28 septembrie, începând cu ora 9:00. Doriți o programare dimineața sau după-amiaza?
+User: După-amiază.
+Agent: La doctor Tripon Robert, după-amiaza sunt disponibile programări doar marți, 6 octombrie, la orele 14:00 și 14:30. Vă convine una dintre aceste ore?
+User: Ă, da, da, puteți să ziceți cât costă o consultație?
+Agent: Consultația oftalmologică costă 200 de lei. Dacă în urma consultației vă faceți ochelari la noi, consultația este gratuită. Doriți să vă programez pentru marți, 6 octombrie, la ora 14:00 sau la...
+User: Mi-o țe te face domnu' tri po' Robert.
+Agent: Pentru a finaliza programarea, am nevoie de numele dumneavoastră complet și de numărul de telefon. Cum vă...
+User: De OCT face?
+Agent: Da, facem și investigații OCT. Prețul pentru o investigație OCT este de 300 de lei.
+
+Pentru a vă programa la doctor Tripon Robert, marți, 6 octombrie, la ora 14:00, am nevoie de numele dumneavoastră complet și de numărul de telefon. Cum vă numiți?
+User: Ă, mă mai gândesc dacă vreau această programare.
+Agent: Înțeleg, luați-vă timpul necesar pentru a decide. Dacă doriți să programați mai târziu, ne puteți suna din nou. Cu ce altceva vă mai pot ajuta astăzi?
+User: Cu nimic.
+Agent: Vă mulțumesc pentru apel și vă doresc o zi bună!

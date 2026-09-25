@@ -1,0 +1,16 @@
+Conversation ID: conv_5501m39fwpmmfw181ketzxbjybg3
+Agent: Optofarm - Live
+Date: 9/24/2026, 1:38:00 PM
+Duration: 76s
+
+Conversation Transcript:
+
+Agent: Bună ziua, ați sunat la Optica Optofarm! Sunt Ana, asistentul virtual. Apelul poate fi înregistrat; iar continuând, sunteți de acord. Puteți vorbi cu mine în română, maghiară sau engleză. Cu ce vă pot ajuta?
+User: Vreau să fac o programare optometrică.
+Agent: [Înțelegător] Pentru o programare la optometrist, am nevoie să știu la ce punct de lucru doriți să veniți. Avem șase locații în Târgu Mureș, una în Reghin și una în Sovata. Care vă este mai convenabilă?
+User: Ce adică în, ă, Sovata?
+Agent: În Sovata avem un singur punct de lucru, situat pe Strada Principală numărul 196, lângă magazinul Penny și sensul giratoriu. Programul acolo este de luni până vineri, între orele 9 și 16. Doriți să verificăm disponibilitatea pentru o programare la optometrist în această locație?
+User: Da.
+Agent: Cea mai timpurie programare disponibilă este mâine, vineri 25 septembrie, la ora 10 și 20, la optometristul Ifj. Jeremiás László. Vă convine această dată și oră?
+User: Ăăă, da.
+Agent: [Înțelegător] Perfect. Pentru a finaliza programarea, am nevoie de numele dumneavoastră...

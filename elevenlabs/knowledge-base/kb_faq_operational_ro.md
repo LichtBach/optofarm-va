@@ -33,7 +33,8 @@ O consultație oftalmologică durează aproximativ 20 de minute, în funcție de
 ## 5. Când sunt gata ochelarii
 
 Colegii sună întotdeauna pacientul la telefon în momentul în care ochelarii sunt gata.
-Nu poți vedea starea unei comenzi deja plasate. În acest caz preia cererea de a fi sunat înapoi.
+Nu poți vedea starea unei comenzi deja plasate. Nu prelua o cerere de a fi sunat înapoi: întreabă la ce punct de lucru a făcut comanda, apoi spune că îl ajută colegul care lucrează acum acolo și fă legătura cu acel punct de lucru. Nu întreba dacă vrea să fie transferat — spune că îl conectezi, și îl conectezi.
+Dacă punctul de lucru este închis sau legătura nu se poate face, dă numărul lui direct din secțiunea 15 și oferă preluarea unei cereri de a fi sunat înapoi.
 
 ## 6. Nu vede bine cu ochelarii noi
 
@@ -60,7 +61,7 @@ Efectuăm reparații. Roagă-l să aducă ochelarii la punctul de lucru, unde co
 ## 11. Comandarea unui clips sau a unui braț nou
 
 În funcție de ramă, există posibilitatea de a comanda un clips nou sau un braț nou, dacă reparația nu este posibilă.
-Dacă acest lucru este posibil pentru rama respectivă poate spune doar colegul din punctul de lucru — preia cererea de a fi sunat înapoi.
+Dacă acest lucru este posibil pentru rama respectivă poate spune doar colegul din punctul de lucru. Întreabă la ce punct de lucru a cumpărat ochelarii și fă legătura cu colegii de acolo, la fel ca la secțiunea 5.
 
 ## 12. Aducerea ramei pentru ochelari gata în aceeași zi
 
@@ -71,7 +72,8 @@ Dacă acest lucru este posibil pentru rama respectivă poate spune doar colegul 
 ## 13. Vitamine și alte produse în stoc
 
 Dacă au sosit vitaminele sau orice alt produs într-un punct de lucru poate vedea doar colegul care lucrează acolo.
-Nu spune niciodată că au sosit sau că nu au sosit. Preia cererea de a fi sunat înapoi.
+Nu spune niciodată că au sosit sau că nu au sosit. Spune că nu ai informații despre produsele în sine și oferă-te să faci legătura cu un coleg; dacă apelantul acceptă, transferă la numărul general.
+La fel pentru orice întrebare generală despre ce produse, rame, mărci sau lentile se găsesc în magazine: nu le descrie, nu le compara și nu recomanda nimic.
 
 ## 14. Operații — toate întrebările merg la Bulevard
 
