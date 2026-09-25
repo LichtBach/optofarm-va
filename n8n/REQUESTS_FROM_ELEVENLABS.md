@@ -5,6 +5,41 @@ from ElevenLabs; this is the other direction. Newest first.
 
 ---
 
+## 2026-09-25 (night) — the ElevenLabs side is finished; two things are now waiting only on you
+
+Status note rather than a new request. **The agent has moved to a different ElevenLabs workspace**
+(`optofarm@splitagency.eu`), agent *Optofarm - Live* `agent_5301m37q64aye28t44vx4cbmtkv7`, branch
+`agtbrch_9201m37q66bbfzr8cz7jed22d9ff`, with **+40373800850** attached to it. The old
+*Optofarm Agent - DEMO* agent is dead and has taken no calls since 23 September 20:13 — if you are
+testing against it, you are testing nothing.
+
+Everything ElevenLabs owns is now live and verified on that agent: system prompt, the eleven
+`transfer_to_number` routes, `evolvo_check_availability`, both operational FAQs, and as of tonight
+the `escalate_to_human` procedure (`version_id agtprcv_4401m3ctcmfefat9vgdyy2kvdats`).
+
+**That means the two open requests below are the only remaining causes, and neither of them is
+something we can fix from our side:**
+
+1. **The `Optometrist ` prefix in returned names** (the 2026-09-25 entry). Our prompt rule, our
+   guardrail and our tool description are all now as strong as they can be made, and they are still
+   only asking the model to delete a word it can see in its own input on every single turn. The word
+   has to stop arriving.
+2. **The 11 "clinic" strings** (the 2026-09-21 entry), five of which begin *"Tell the caller…"*. Our
+   guardrail tells the agent to silently correct these, which is a backstop, not a fix.
+
+### One thing to be aware of before any credential work
+
+The workspace migration means the ElevenLabs tools now reference a **different workspace-secret
+record** from the one they used before. Calls are succeeding today, so the value evidently still
+matches what n8n expects — but it does mean **rotating the webhook secret is now a two-sided,
+coordinated change**, not a one-line edit on either side. The old workspace's value is in this
+repository's public git history and still needs rotating, together with the evolvo API key. Please
+do not rotate either one unilaterally; say when you are ready and we will change both ends together.
+
+No values in this file, and none in this repository — by rule.
+
+---
+
 ## 2026-09-25 — please stop returning the word "Optometrist" inside the provider name
 
 Two live transcripts from 24 September, after the rule was already in place:

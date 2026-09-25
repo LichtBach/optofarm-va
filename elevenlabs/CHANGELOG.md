@@ -67,20 +67,24 @@ would have lost to it. The trigger now reads:
 > those only once the branch is closed, or a transfer has failed, and the caller has accepted a
 > callback.
 
-The three steps are unchanged; only the trigger moved. Saved as a draft on
-`agtprc_4401m37qpbrjf7588ypqash4m05y` and mirrored at
-`elevenlabs/procedures/escalate_to_human.pending-publish.json`.
+The three steps are unchanged; only the trigger moved. Mirrored at
+`elevenlabs/procedures/escalate_to_human.live.json`.
 
-**It is not live yet.** `agents_compile_procedures` returned a workflow carrying the new trigger,
-but it does not commit: afterwards `has_draft` is `true`, the procedure's `version_id` is unchanged,
-and grepping the agent's live `workflow` still finds the old wording and none of the new. This is
-the same behaviour seen on the old account, so it is the MCP surface, not the account. There is no
-commit-draft call exposed, and `agents_create_draft` wants the entire `conversation_config` +
-`platform_settings` + `workflow` (134 KB), which will not fit in a tool argument.
+**Published, and verified live.** `version_id` moved
+`agtprcv_6701m37qpjnmfr085vse2pxbhzxf` → `agtprcv_4401m3ctcmfefat9vgdyy2kvdats`, `has_draft` is back
+to `false`, and the trigger plus all three step instructions now appear verbatim in the agent's live
+`workflow`, with the old wording gone from it entirely. The workflow is still 27 nodes and 30 edges,
+`booking` and `cancel_or_reschedule` kept their existing `version_id`s, and prompt length, knowledge
+base count, tool count, LLM, voice, TTS model and language presets are all byte-identical before and
+after — so the publish committed this one procedure and disturbed nothing else.
 
-**Someone has to press publish in the dashboard: *Optofarm - Live* → Main branch → Procedures.**
-Until then the agent still takes a callback for product and own-order questions, and the prompt,
-FAQ and transfer-route work on those two cases is inert.
+**Gotcha worth keeping: `agents_compile_procedures` does not commit.** It returned a workflow
+carrying the new trigger while leaving `has_draft` true, the `version_id` unchanged and the live
+workflow on the old wording — the same behaviour as on the old account, so it is the MCP surface and
+not the workspace. No commit-draft call is exposed, and `agents_create_draft` wants the entire
+`conversation_config` + `platform_settings` + `workflow` (134 KB), which will not fit in a tool
+argument. **Publishing a procedure is a dashboard action: *Optofarm - Live* → Main branch →
+Procedures.** Plan for a human click whenever a procedure changes.
 
 ### Still outstanding
 - Rotate the n8n webhook secret. The old workspace's value is in public git history; the new
