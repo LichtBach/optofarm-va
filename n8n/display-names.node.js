@@ -17,12 +17,15 @@ const norm = s => (s || '').toString().toLowerCase().normalize('NFD')
 
 // Keyed on the normalised RAW evolvo name. Only names that actually change are listed;
 // the other ten come back untouched. Romanian names are deliberately left stripped
-// (clinic's call, 2026-09-21) — only Hungarian names get their diacritics back.
+// (Optofarm's call, 2026-09-21) — only Hungarian names get their diacritics back.
+// The 'Optometrist' prefix is never returned (2026-09-25): the agent read it aloud as a title.
+// provider_type carries the distinction. Matching still accepts the prefixed form on the way in.
 const DISPLAY = {
   'dr. ilovan anca': 'Dr. Ilovan Anica',                                   // wrong given name, not a diacritic
-  'optometrist bodi ildiko': 'Optometrist Bódi Ildikó',
-  'optometrist ifj jeremias laszlo': 'Optometrist Ifj. Jeremiás László',   // note the restored period
-  'optometrist jeremias zoltan': 'Optometrist Jeremiás Zoltán',
+  'optometrist bodi ildiko': 'Bódi Ildikó',
+  'optometrist ifj jeremias laszlo': 'Ifj. Jeremiás László',   // note the restored period
+  'optometrist jeremias zoltan': 'Jeremiás Zoltán',
+  'optometrist dan laura': 'Dan Laura',
   // Both the split form (what the tools return) and the full raw form (what evolvo stores).
   'dr. prof. szekely attila': 'Dr. Prof. Székely Attila',
   'dr. prof. szekely attila - consiliere / terapie psiho-ortoptica':
@@ -48,7 +51,7 @@ const LOCATIONS = {
 };
 
 // Every provider name evolvo held on 2026-09-21. A name arriving that is not in here
-// means the clinic renamed a calendar and DISPLAY needs revisiting — warn, never fail.
+// means Optofarm renamed a calendar and DISPLAY needs revisiting — warn, never fail.
 const KNOWN = new Set(['dr. ardelean adina','dr. baricz anna','dr. elekes ella','dr. ilovan anca',
   'dr. istratuc dorina','dr. ormenisan delia maria','dr. petrea alexandra','dr. popa camelia',
   'dr. prof. szekely attila','dr. prof. szekely attila - consiliere / terapie psiho-ortoptica',
@@ -68,7 +71,7 @@ const one = v => {
   const k = norm(v);
   if (DISPLAY[k]) return DISPLAY[k];
   if (!KNOWN.has(k)) unknown.add(v);
-  return v;
+  return v.replace(/^optometrist\s+/i, '');
 };
 const oneLoc = v => {
   if (typeof v !== 'string' || !v) return v;

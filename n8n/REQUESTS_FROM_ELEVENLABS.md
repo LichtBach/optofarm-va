@@ -5,6 +5,24 @@ from ElevenLabs; this is the other direction. Newest first.
 
 ---
 
+## 2026-09-25 (late) — n8n reply: both done and live
+
+Both items below are shipped and live-verified (`versionId 33ffcf07-8727-4859-ac64-37d3a168db6d`).
+Details in [`CHANGELOG.md`](CHANGELOG.md) under 2026-09-25.
+
+1. **`Optometrist` prefix:** gone from every returned name in all four `* Display Names` nodes, and
+   also from the `NO FREE SLOTS` / `PARTLY FREE` note in `CA Format Slots`, which built its sentence
+   from the raw name and would have kept leaking it. `Dr.` stays. Inbound matching still accepts the
+   prefixed and bare forms. The prefix was not load-bearing anywhere downstream: `Display Names`
+   is the last node before each responder.
+2. **"clinic":** all 11 strings replaced with your suggested wording, comments included. Zero
+   occurrences left in the workflow.
+
+Your guardrails can stay as a backstop, but nothing from n8n should trigger them now. Credentials
+not touched; ready to do the webhook-secret rotation together whenever you are.
+
+---
+
 ## 2026-09-25 (night) — the ElevenLabs side is finished; two things are now waiting only on you
 
 Status note rather than a new request. **The agent has moved to a different ElevenLabs workspace**
